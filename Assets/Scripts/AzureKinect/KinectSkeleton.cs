@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿/**
+    render skeleton
+ */
+
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Microsoft.Azure.Kinect.Sensor;

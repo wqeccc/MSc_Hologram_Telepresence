@@ -1,4 +1,8 @@
-﻿using System.Collections;
+﻿/**
+    kinect setting
+ */
+
+using System.Collections;
 using System.Collections.Generic;
 using System;
 using UnityEngine;
@@ -24,16 +28,19 @@ public class KinectController : MonoBehaviour
     //MULTITHREAD VARIABLES
     public byte[] m_depthImage;
     public byte[] m_colorImage;
+    // the body id for particular person index from this frame
     public byte[] m_bodyIndexMap;
     public List<SkeletonInfo> m_currentSkeletons;
     public object m_bufferLock;
     Thread _kinectThread;
 
 
+    // Control whether the kinect Thread continues to run
     bool _running;
     
     
     public bool kinectInitialized;
+    // resolution
     public int depthWidth;
     public int depthHeight;
     public float[] calibrationTable;
@@ -51,7 +58,7 @@ public class KinectController : MonoBehaviour
         using (Device device = Device.Open(0))
         {
             DepthMode d = DepthMode.WFOV_2x2Binned;
-            print(depthMode);
+            print("depth mode: " + depthMode);
             switch (depthMode)
             {
                 case "WFOV_2x2Binned":
@@ -79,10 +86,10 @@ public class KinectController : MonoBehaviour
             depthWidth = device.GetCalibration().DepthCameraCalibration.ResolutionWidth;
             depthHeight = device.GetCalibration().DepthCameraCalibration.ResolutionHeight;
 
-            print(depthHeight + " "+ depthWidth);
+            print("depth resolution: " + depthHeight + " "+ depthWidth);
             //------------- calibration table
-           Calibration c=  device.GetCalibration();
-           calibrationTable = c.DepthCameraCalibration.Intrinsics.Parameters;
+            Calibration c =  device.GetCalibration();
+            calibrationTable = c.DepthCameraCalibration.Intrinsics.Parameters;
 
             //------------- end calibration table
 
