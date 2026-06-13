@@ -9,7 +9,6 @@ using System.IO;
 using UnityEngine;
 using Microsoft.Azure.Kinect.Sensor;
 using Microsoft.Azure.Kinect.BodyTracking;
-    
 using System.Threading;
 
 public struct SkeletonInfo
