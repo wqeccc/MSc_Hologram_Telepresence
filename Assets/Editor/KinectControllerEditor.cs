@@ -38,5 +38,6 @@ public class KinectControllerEditor : Editor
         selected = EditorGUILayout.Popup("Depth Mode", selected, options);
         myTarget.depthMode = options[selected];
 
+        myTarget.usePlayback = EditorGUILayout.Toggle("Use Playback", myTarget.usePlayback);
     }
 }

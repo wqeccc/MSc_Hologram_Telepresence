@@ -203,6 +203,7 @@ MonoBehaviour:
   depthHeight: 0
   calibrationTable: []
   depthMode: WFOV_2x2Binned
+  usePlayback: 1
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
