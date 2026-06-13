@@ -1,43 +1,39 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEditor;
 
 [CustomEditor(typeof(KinectController))]
 public class KinectControllerEditor : Editor
 {
-    string[] options;
-    int selected = 0;
-    
-    public void Awake()
+    string[] options = { "WFOV_2x2Binned", "NFOV_2x2Binned", "WFOV_Unbinned", "NFOV_Unbinned" };
+    SerializedProperty depthModeProp;
+    SerializedProperty usePlaybackProp;
+
+    void OnEnable()
     {
-          options = new string[]
-         {
-             "WFOV_2x2Binned", "NFOV_2x2Binned", "WFOV_Unbinned","NFOV_Unbinned"
-         };
+        // bind variables with SerializedProperty
+        depthModeProp = serializedObject.FindProperty("depthMode");
+        usePlaybackProp = serializedObject.FindProperty("usePlayback");
     }
+
     public override void OnInspectorGUI()
     {
-        KinectController myTarget = (KinectController)target;
-        
-       switch (myTarget.depthMode)
-        {
-            case "WFOV_2x2Binned":
-                selected = 0;
-                break;
-            case "NFOV_2x2Binned":
-                selected = 1;
-                break;
-            case "WFOV_Unbinned":
-                selected = 2;
-                break;
-            case "NFOV_Unbinned":
-                selected = 3;
-                break;
-        }
-        selected = EditorGUILayout.Popup("Depth Mode", selected, options);
-        myTarget.depthMode = options[selected];
+        // call Update
+        serializedObject.Update();
 
-        myTarget.usePlayback = EditorGUILayout.Toggle("Use Playback", myTarget.usePlayback);
+        // Popup
+        int selected = Array.IndexOf(options, depthModeProp.stringValue);
+        if (selected < 0) selected = 0;
+
+        selected = EditorGUILayout.Popup("Depth Mode", selected, options);
+        depthModeProp.stringValue = options[selected];
+
+        // Toggle
+        EditorGUILayout.PropertyField(usePlaybackProp);
+
+        // apply properties
+        serializedObject.ApplyModifiedProperties();
     }
 }
