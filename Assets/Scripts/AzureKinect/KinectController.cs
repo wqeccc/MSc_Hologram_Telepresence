@@ -46,13 +46,8 @@ public class KinectController : MonoBehaviour
     public int depthHeight;
     public float[] calibrationTable;
 
-    // c# wrapper does not support playback
-    // private Playback playback;
-    // private Tracker tracker;
-
     // Set through custom inspector
     public string depthMode;
-    public bool usePlayback;
 
     void kinectTask()
     {
@@ -138,95 +133,19 @@ public class KinectController : MonoBehaviour
         }
     }
 
-    void PlaybackStart()
-    {
-        // string path = Path.Combine(Application.streamingAssetsPath, depthMode.ToUpper(), "SAMPLE.mkv");
-        // print("mkv path: " + path);
-
-        // playback = new Playback(path);
-
-        // Calibration c = playback.GetCalibration();
-        // calibrationTable = c.DepthCameraCalibration.Intrinsics.Parameters;
-        // depthWidth = c.DepthCameraCalibration.ResolutionWidth;
-        // depthHeight = c.DepthCameraCalibration.ResolutionHeight;
-
-        // print("depth resolution: " + depthHeight + " "+ depthWidth);
-
-        // m_depthImage = new byte[depthWidth * depthHeight * 4];
-        // m_colorImage = new byte[depthWidth * depthHeight * 4];
-        // m_bodyIndexMap = new byte[depthWidth * depthHeight];
-
-        // tracker = Tracker.Create(
-        //     c,
-        //     new TrackerConfiguration {
-        //         ProcessingMode = TrackerProcessingMode.Cuda,
-        //         SensorOrientation = SensorOrientation.Default
-        //     }
-        // );
-
-        // kinectInitialized = true;
-    }
-
-    void PlaybackTask() {
-        // // capture next frame
-        // using (Capture capture = playback.GetNextCapture())
-        // {
-        //     if (capture == null) return;
-
-        //     lock (m_bufferLock)
-        //     {
-        //         m_depthImage = capture.Depth?.Memory.ToArray();
-        //         m_colorImage = capture.Color?.Memory.ToArray();
-        //     }
-
-        //     // body tracking
-        //     if (tracker == null) return;
-        //     tracker.EnqueueCapture(capture);
-
-        //     using (Frame frame = tracker.PopResult(TimeSpan.Zero, throwOnTimeout: false))
-        //     {
-        //         if (frame == null) return;
-        //         lock (m_bufferLock)
-        //         {
-        //             m_currentSkeletons.Clear();
-        //             for (int body = 0; body < frame.NumberOfBodies; body++) {
-        //                 m_currentSkeletons.Add(
-        //                     new SkeletonInfo(
-        //                         frame.GetBodySkeleton((uint)body),
-        //                         frame.GetBodyId((uint)body)
-        //                     )
-        //                 );
-        //             }
-        //             m_bodyIndexMap = frame.BodyIndexMap?.Memory.ToArray();
-        //         }
-        //     }
-        // }
-    }
-
     void Start()
     {
         kinectInitialized = false;
         m_currentSkeletons = new List<SkeletonInfo>();
         m_bufferLock = new object();
-
-        if (usePlayback) {
-            // PlaybackStart();
-        } else {
-            // live kinect mode
-            _running = true;
-            _kinectThread = new Thread(kinectTask);
-            _kinectThread.Start();
-        }
+        _running = true;
+        _kinectThread = new Thread(kinectTask);
+        _kinectThread.Start();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (usePlayback) {
-            // PlaybackTask();
-            return;
-        }
-
         if (Device.GetInstalledCount() == 0)
         {
             print("No Kinect installed");
@@ -236,12 +155,7 @@ public class KinectController : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        if (usePlayback) {
-            // tracker?.Dispose();
-            // playback?.Dispose();
-        } else {
-            _running = false;
-            _kinectThread.Join();
-        }
+        _running = false;
+        _kinectThread.Join();
     }
 }

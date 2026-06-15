@@ -9,13 +9,13 @@ public class KinectControllerEditor : Editor
 {
     string[] options = { "WFOV_2x2Binned", "NFOV_2x2Binned", "WFOV_Unbinned", "NFOV_Unbinned" };
     SerializedProperty depthModeProp;
-    SerializedProperty usePlaybackProp;
+    // SerializedProperty usePlaybackProp;
 
     void OnEnable()
     {
         // bind variables with SerializedProperty
         depthModeProp = serializedObject.FindProperty("depthMode");
-        usePlaybackProp = serializedObject.FindProperty("usePlayback");
+        // usePlaybackProp = serializedObject.FindProperty("usePlayback");
     }
 
     public override void OnInspectorGUI()
@@ -31,7 +31,7 @@ public class KinectControllerEditor : Editor
         depthModeProp.stringValue = options[selected];
 
         // Toggle
-        EditorGUILayout.PropertyField(usePlaybackProp);
+        // EditorGUILayout.PropertyField(usePlaybackProp);
 
         // apply properties
         serializedObject.ApplyModifiedProperties();
