@@ -134,6 +134,8 @@ GameObject:
   - component: {fileID: 688868501}
   - component: {fileID: 688868500}
   - component: {fileID: 688868499}
+  - component: {fileID: 688868503}
+  - component: {fileID: 688868502}
   m_Layer: 0
   m_Name: KinectManager
   m_TagString: Untagged
@@ -202,6 +204,35 @@ MonoBehaviour:
   depthHeight: 0
   calibrationTable: []
   depthMode: WFOV_2x2Binned
+--- !u!114 &688868502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 688868497}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29aff23a13f2b45a68de1eee3350b367, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  remesh: 0
+  hideNonSkeletonPixels: 0
+  KinectMachineIP: 
+  KinectMachinePort: 0
+--- !u!114 &688868503
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 688868497}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0590496479a343a59cf34bf9863b3f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  port: 0
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
