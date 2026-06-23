@@ -5,7 +5,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System;
-using System.IO;
 using UnityEngine;
 using Microsoft.Azure.Kinect.Sensor;
 using Microsoft.Azure.Kinect.BodyTracking;
@@ -136,9 +135,9 @@ public class KinectController : MonoBehaviour
     void Start()
     {
         kinectInitialized = false;
+        _running = true;
         m_currentSkeletons = new List<SkeletonInfo>();
         m_bufferLock = new object();
-        _running = true;
         _kinectThread = new Thread(kinectTask);
         _kinectThread.Start();
     }
