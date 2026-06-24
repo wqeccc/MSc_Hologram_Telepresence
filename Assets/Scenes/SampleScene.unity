@@ -136,6 +136,7 @@ GameObject:
   - component: {fileID: 688868499}
   - component: {fileID: 688868503}
   - component: {fileID: 688868502}
+  - component: {fileID: 688868504}
   m_Layer: 0
   m_Name: KinectManager
   m_TagString: Untagged
@@ -165,7 +166,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 688868497}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f74da9e1ad0c94fd8bb056ac097939fa, type: 3}
   m_Name: 
@@ -179,7 +180,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 688868497}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e32d9b96d4ac45bbb3a42a4755a6073, type: 3}
   m_Name: 
@@ -211,7 +212,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 688868497}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 29aff23a13f2b45a68de1eee3350b367, type: 3}
   m_Name: 
@@ -227,12 +228,27 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 688868497}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c0590496479a343a59cf34bf9863b3f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   port: 0
+--- !u!114 &688868504
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 688868497}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa9a5b85a7b5b4d08961cd1e4278fdbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  renderLocalUser: 0
+  sendData: 1
+  sp_l: {x: 0, y: 0, z: 0}
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
