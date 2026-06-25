@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/ML2_Scene.unity
+    path: Assets/Scenes/ML2_HMD_Scene.unity
     guid: 9bedf7988687145b0a4479784c999914
   m_configObjects:
     com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: b355ff0ff436fd443a84d57e326cce95, type: 2}
