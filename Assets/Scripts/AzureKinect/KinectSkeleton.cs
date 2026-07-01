@@ -25,7 +25,7 @@ public class KinectSkeleton : MonoBehaviour {
     const float maxDistanceToAssumeSamePersonReentry = 2;
 
     void Awake () {
-        kinectController = FindObjectOfType<KinectController> ();
+        kinectController = FindFirstObjectByType<KinectController> ();
         if (kinectController == null) {
             print ("requires a kinect controller");
             return;

@@ -25,7 +25,7 @@ public class KinectPointCloud : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        _kinectController = FindObjectOfType<KinectController>();
+        _kinectController = FindFirstObjectByType<KinectController>();
         if (_kinectController == null)
         {
             print("requires a kinect controller");

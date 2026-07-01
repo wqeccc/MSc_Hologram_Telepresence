@@ -15,7 +15,7 @@ public class LocalHologram : MonoBehaviour
 
     void Start()
     {
-        _kinectController = FindObjectOfType<KinectController>();
+        _kinectController = FindFirstObjectByType<KinectController>();
     }
 
     void CreatePointCloudObject()

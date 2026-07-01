@@ -22,7 +22,7 @@ public class PointCloudNetworkSender : MonoBehaviour
 
     void Start()
     {
-        _kinectController = FindObjectOfType<KinectController>();
+        _kinectController = FindFirstObjectByType<KinectController>();
 
         _udpClient = new UdpClient();
         _running = true;

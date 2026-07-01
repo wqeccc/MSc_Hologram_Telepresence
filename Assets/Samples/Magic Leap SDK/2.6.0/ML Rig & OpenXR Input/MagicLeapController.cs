@@ -42,7 +42,7 @@ namespace MagicLeap.Examples
 
         private MagicLeapController()
         {
-            var manager = UnityEngine.Object.FindObjectOfType<InputActionManager>();
+            var manager = UnityEngine.Object.FindFirstObjectByType<InputActionManager>();
             if (manager == null)
                 throw new System.NullReferenceException("Could not find an InputActionManager to initialize a MagicLeapController from");
 

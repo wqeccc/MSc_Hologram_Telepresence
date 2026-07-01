@@ -18,7 +18,7 @@ public class KinectNetworkSender : MonoBehaviour
 
     void Start()
     {
-        _kinectController = FindObjectOfType<KinectController>();
+        _kinectController = FindFirstObjectByType<KinectController>();
         if (_kinectController == null)
         {
             print("requires a kinect controller");
