@@ -64,7 +64,7 @@ public class LocalHologram : MonoBehaviour
             return;
         }
 
-        if (_networkSender == null && attachedSender == false)
+        if (sendData && _networkSender == null && attachedSender == false)
         {
             _networkSender = gameObject.AddComponent<PointCloudNetworkSender>();
             Debug.Log("[LocalHologram] Auto-attached PointCloudNetworkSender");
