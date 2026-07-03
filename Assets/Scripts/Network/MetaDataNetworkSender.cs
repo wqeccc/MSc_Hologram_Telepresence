@@ -11,7 +11,7 @@ public class MetaDataNetworkSender : MonoBehaviour
     public Transform hologramTransform;  // P_b (S_b->a)
 
     [Header("Network Settings")]
-    public string targetIP = "192.168.1.100"; // TODO
+    public string targetIP = "192.168.42.51"; // TODO ml2 ip address: 192.168.42.51, ml2 pc: 129.11.145.130
     public int targetPort = 8081;
 
     private UdpClient _udpClient;

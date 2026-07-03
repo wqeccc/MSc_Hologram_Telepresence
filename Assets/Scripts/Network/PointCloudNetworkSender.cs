@@ -9,7 +9,7 @@ public class PointCloudNetworkSender : MonoBehaviour
     public KinectController _kinectController;
 
     [Header("Network Settings")]
-    public string targetIP = "192.168.1.100"; // TODO ml2 ip address
+    public string targetIP = "192.168.42.51"; // TODO ml2 ip address: 192.168.42.51, ml2 pc: 129.11.145.130
     public int targetPort = 8080; // TODO 8080-pointcloud 8081-metadata
 
     private UdpClient _udpClient;
