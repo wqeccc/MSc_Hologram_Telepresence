@@ -89,10 +89,11 @@ Shader "Custom/Rect Billboard"
 			// Aux Functions												*
 			// **************************************************************
 			int textureToDepth(float x, float y)
-			{
+			{ // TextureFormat.RG16
 				float4 d = tex2Dlod(_DepthTex,float4(x, y,0,0));
 				int dr = d.r * 255;
-				int dg = d.g * 255;
+				// int dg = d.g * 255;
+				int dg = d.b * 255;
 
 				int dValue = dr | dg << 8;
 				return dValue;
