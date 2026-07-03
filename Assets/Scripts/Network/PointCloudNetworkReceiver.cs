@@ -23,6 +23,7 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     int _depthHeight;
     float[] _calibrationTable;
 
+    // buffer pool
     const int _nOfBufferFrames = 5;
     Stack<byte[]> _colorFramesEmpty;
     Stack<byte[]> _depthFramesEmpty;
@@ -41,13 +42,14 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     private int _currentAssemblingFrame = -1;
     private int _colorByteSize;
     private int _depthByteSize;
-    private int _playerIndexByteSize;
+    private int _bodyIndexByteSize;
     private bool _configReceived = false;
 
     public bool hideNonSkeletonPixels = true;
-    public int LocalListeningPort = 8080;
+    public int listeningPort = 8080;
 
-    // TODO comment & change params name
+    private GameObject _remoteSpeakerObj;
+    public Transform GetRemoteSpeakerTransform => _remoteSpeakerObj != null ? _remoteSpeakerObj.transform : null;
 
     void Start()
     {
@@ -63,6 +65,12 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         _framesLock = new object();
         _running = true;
 
+        _remoteSpeakerObj = new GameObject("RemoteSpeaker");
+        _remoteSpeakerObj.transform.parent = this.transform;
+        _remoteSpeakerObj.transform.localPosition = Vector3.zero;
+        _remoteSpeakerObj.transform.localRotation = Quaternion.identity;
+        _remoteSpeakerObj.transform.localScale = Vector3.one;
+
         _networkThread = new Thread(networkLoop);
         _networkThread.IsBackground = true;
         _networkThread.Start();
@@ -72,48 +80,48 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     {
         try
         {
-            // 初始化 UDP 監聽
-            _udpClient = new UdpClient(LocalListeningPort);
-            // 允許接收來自任何 IP 的封包
-            IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, LocalListeningPort);
-            Debug.Log($"UDP Receiver started. Listening on port {LocalListeningPort}...");
+            _udpClient = new UdpClient(listeningPort);
+            // receive packets from any ip on listeningPort
+            IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, listeningPort);
+            Debug.Log($"UDP Receiver started. Listening on port {listeningPort}");
 
             while (_running)
             {
-                // 阻塞等待接收原始 UDP 封包
                 byte[] rawPacket = _udpClient.Receive(ref remoteEP);
+                if (rawPacket.Length < 12) continue; // header (12 bytes)
 
-                if (rawPacket.Length < 12) continue; // 格式錯誤的防呆
-
-                // 解析 12 位元組的自訂標頭 (Header)
+                // parse header
                 int frameID = BitConverter.ToInt32(rawPacket, 0);
                 int packetID = BitConverter.ToInt32(rawPacket, 4);
                 int totalPackets = BitConverter.ToInt32(rawPacket, 8);
 
-                // 情況 A：收到的是「初始化配置封包」(我們約定 packetID = -1 作為設定檔暗號)
+                // kinect configuration
                 if (packetID == -1)
                 {
+                    // sender will send 3 times (wait for 3 seconds) in case receiver is not ready (TODO: handshake？)
                     if (!_configReceived)
                     {
-                        ParseConfiguration(rawPacket);
+                        ParseKinectConfig(rawPacket);
+                        Debug.Log("Received kinect config");
                     }
                     continue;
                 }
 
-                // 如果還沒收到配置資訊，先不處理任何點雲數據封包
+                // only process point cloud data when kinect configuration is received
                 if (!_configReceived) continue;
 
-                // 情況 B：處理正常的點雲數據碎片
-                // 如果收到更新的一影格，放棄過去沒湊齊的舊碎片，開啟新影格組裝
+                // handle point cloud data
+                // the data in one frame would be cut into many packets since the maximum size of a UDP packet is 64 kb
                 if (frameID > _currentAssemblingFrame)
                 {
+                    // start collecting next frame data
                     _currentAssemblingFrame = frameID;
                     _framePacketsBuffer.Clear();
                 }
 
+                // combine packets
                 if (frameID == _currentAssemblingFrame)
                 {
-                    // 提取真正的點雲數據碎片 (Payload)
                     byte[] payload = new byte[rawPacket.Length - 12];
                     Buffer.BlockCopy(rawPacket, 12, payload, 0, payload.Length);
 
@@ -122,13 +130,12 @@ public class PointCloudNetworkReceiver : MonoBehaviour
                         _framePacketsBuffer.Add(packetID, payload);
                     }
 
-                    // 檢查碎片是否全部收集齊全了！
+                    // check if all the packets have been collected
                     if (_framePacketsBuffer.Count == totalPackets)
                     {
-                        // 拼回這一影格完整的點雲大蛋糕 (Color + Depth + BodyIndex)
-                        byte[] fullFrameData = AssembleFrame(totalPackets);
-                        
-                        // 將完整大數據拆解分發至對應的渲染佇列中
+                        // Color + Depth + BodyIndex
+                        byte[] fullFrameData = AssembleFrameData(totalPackets);
+
                         DistributeFrameData(fullFrameData);
                     }
                 }
@@ -136,18 +143,20 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError("UDP 網路迴圈發生錯誤: " + e.Message);
+            Debug.LogError("UDP error: " + e.Message);
         }
     }
 
-    // 解析初始化設定資訊 (解析方式與原本 TCP 類似，但資料來源是單個 UDP 封包)
-    private void ParseConfiguration(byte[] configPacket)
+    private void ParseKinectConfig(byte[] configPacket)
     {
-        int offset = 12; // 跳過 Header
+        int offset = 12; // skip header
         
-        _depthHeight = BitConverter.ToInt32(configPacket, offset); offset += 4;
-        _depthWidth = BitConverter.ToInt32(configPacket, offset); offset += 4;
-        int calibrationSize = BitConverter.ToInt32(configPacket, offset); offset += 4;
+        _depthHeight = BitConverter.ToInt32(configPacket, offset);
+        offset += 4;
+        _depthWidth = BitConverter.ToInt32(configPacket, offset);
+        offset += 4;
+        int calibrationSize = BitConverter.ToInt32(configPacket, offset);
+        offset += 4;
 
         _calibrationTable = new float[calibrationSize];
         for (int i = 0; i < calibrationSize; i++)
@@ -156,27 +165,22 @@ public class PointCloudNetworkReceiver : MonoBehaviour
             offset += 4;
         }
 
-        Debug.Log("UDP 成功接收設定資訊: " + _depthHeight + "x" + _depthWidth);
-
-        // 計算每一影格各資料類型所需的精準 Byte 大小
         _colorByteSize = _depthWidth * _depthHeight * 4;
         _depthByteSize = _depthWidth * _depthHeight * 2;
-        _playerIndexByteSize = _depthWidth * _depthHeight;
+        _bodyIndexByteSize = _depthWidth * _depthHeight;
 
-        // 初始化緩衝緩存池
         for (int i = 0; i < _nOfBufferFrames; i++)
         {
             _colorFramesEmpty.Push(new byte[_colorByteSize]);
             _depthFramesEmpty.Push(new byte[_depthByteSize]);
-            _bodyIndexFramesEmpty.Push(new byte[_playerIndexByteSize]);
+            _bodyIndexFramesEmpty.Push(new byte[_bodyIndexByteSize]);
         }
 
         _configReceived = true;
-        _networkInitialized = true; // 觸發主執行緒的 PostKinectInit
+        _networkInitialized = true;
     }
 
-    // 將所有零散的 UDP 碎片拼接成完整的一影格總陣列
-    private byte[] AssembleFrame(int totalPackets)
+    private byte[] AssembleFrameData(int totalPackets)
     {
         int totalSize = 0;
         for (int i = 0; i < totalPackets; i++)
@@ -197,7 +201,7 @@ public class PointCloudNetworkReceiver : MonoBehaviour
 
     private void DistributeFrameData(byte[] fullFrameData)
     {
-        int expectedPointCloudSize = _colorByteSize + _depthByteSize + _playerIndexByteSize;
+        int expectedPointCloudSize = _colorByteSize + _depthByteSize + _bodyIndexByteSize;
         if (fullFrameData.Length < expectedPointCloudSize) return;
 
         byte[] colorBuffer;
@@ -219,7 +223,7 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         offset += _colorByteSize;
         Buffer.BlockCopy(fullFrameData, offset, depthBuffer, 0, _depthByteSize);
         offset += _depthByteSize;
-        Buffer.BlockCopy(fullFrameData, offset, bodyIndexBuffer, 0, _playerIndexByteSize);
+        Buffer.BlockCopy(fullFrameData, offset, bodyIndexBuffer, 0, _bodyIndexByteSize);
 
         lock (_framesLock)
         {
@@ -260,7 +264,8 @@ public class PointCloudNetworkReceiver : MonoBehaviour
                     a.GetComponent<MeshFilter>().mesh.SetIndices(ind.ToArray(), MeshTopology.Points, 0);
                     a.GetComponent<MeshFilter>().mesh.bounds = new Bounds(new Vector3(0, 0, 4.5f), new Vector3(5, 5, 5));
                     a.AddComponent<MeshRenderer>().material = _renderMaterial;
-                    a.transform.parent = this.gameObject.transform;
+
+                    a.transform.parent = _remoteSpeakerObj.transform;
                     a.transform.localPosition = Vector3.zero;
                     a.transform.localRotation = Quaternion.identity;
                     a.transform.localScale = Vector3.one;
@@ -273,7 +278,8 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         afinal.AddComponent<MeshFilter>().mesh = new Mesh { vertices = points.ToArray() };
         afinal.GetComponent<MeshFilter>().mesh.SetIndices(ind.ToArray(), MeshTopology.Points, 0);
         afinal.AddComponent<MeshRenderer>().material = _renderMaterial;
-        afinal.transform.parent = this.gameObject.transform;
+        
+        afinal.transform.parent = _remoteSpeakerObj.transform;
         afinal.transform.localPosition = Vector3.zero;
         afinal.transform.localRotation = Quaternion.identity;
         afinal.transform.localScale = Vector3.one;
@@ -296,6 +302,7 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         _texturesInitialized = true;
     }
 
+    // render point cloud
     void Update()
     {
         if (!_networkInitialized) return;
@@ -322,14 +329,17 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         _depthTexture.Apply();
         _bodyIndexTexture.Apply();
         
-        MeshRenderer[] renderers = GetComponentsInChildren<MeshRenderer>();
-        for (int i = 0; i < renderers.Length; i++)
+        if (_remoteSpeakerObj != null)
         {
-            MeshRenderer mr = renderers[i];
-            mr.material.SetInt("_RemoveBackground", hideNonSkeletonPixels ? 1 : 0);
-            mr.material.SetTexture("_ColorTex", _colorTexture);
-            mr.material.SetTexture("_DepthTex", _depthTexture);
-            mr.material.SetTexture("_BodyIndexTex", _bodyIndexTexture);
+            MeshRenderer[] renderers = _remoteSpeakerObj.GetComponentsInChildren<MeshRenderer>();
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                MeshRenderer mr = renderers[i];
+                mr.material.SetInt("_RemoveBackground", hideNonSkeletonPixels ? 1 : 0);
+                mr.material.SetTexture("_ColorTex", _colorTexture);
+                mr.material.SetTexture("_DepthTex", _depthTexture);
+                mr.material.SetTexture("_BodyIndexTex", _bodyIndexTexture);
+            }
         }
     }
 
