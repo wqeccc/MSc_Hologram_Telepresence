@@ -30,7 +30,7 @@ public class RemoteHologram : MonoBehaviour
     void Start()
     {
         #if UNITY_EDITOR || UNITY_STANDALONE_WIN
-        _kinectController = FindObjectOfType<KinectController>();
+        _kinectController = FindFirstObjectByType<KinectController>();
         #endif
 
         _pcReceiver = gameObject.AddComponent<PointCloudNetworkReceiver>();
