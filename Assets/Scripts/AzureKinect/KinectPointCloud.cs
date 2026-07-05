@@ -234,9 +234,9 @@ public class KinectPointCloud : MonoBehaviour
     }
     void PostKinectInit()
     {
-        _depthTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.RG16, false);
-        _colorTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.BGRA32, false);
-        _bodyIndexTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.Alpha8, false);
+        _depthTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.RG16, false,true);
+        _colorTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.BGRA32, false,true);
+        _bodyIndexTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.Alpha8, false, true);
         _depthTexture.filterMode = FilterMode.Point;
         _colorTexture.filterMode = FilterMode.Point;
         if (remesh)
