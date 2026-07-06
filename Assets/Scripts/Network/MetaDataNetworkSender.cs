@@ -6,17 +6,23 @@ using UnityEngine;
 public class MetaDataNetworkSender : MonoBehaviour
 {
     [HideInInspector]
-    public Transform localTransform;     // S_a
+    // S_a
+    public Vector3 localTransform_pos;
+    public Quaternion localTransform_rot;
     [HideInInspector]
-    public Transform hologramTransform;  // P_b (S_b->a)
+    // P_b (S_b->a)
+    public Vector3 hologramTransform_pos;
+    public Quaternion hologramTransform_rot;
 
     [Header("Network Settings")]
-    public string targetIP = "192.168.42.51"; // TODO ml2 ip address: 192.168.42.51, ml2 pc: 129.11.145.130
+    public string targetIP = "129.11.145.130"; // TODO ml2 ip address: 192.168.42.51, ml2 pc: 129.11.145.130/125
     public int targetPort = 8081;
 
     private UdpClient _udpClient;
     private Thread _sendThread;
     private bool _running;
+
+    // TODO data lock
 
     void Start()
     {
@@ -35,14 +41,14 @@ public class MetaDataNetworkSender : MonoBehaviour
 
         while (_running)
         {
-            if (localTransform != null && hologramTransform != null)
+            if (true) // TODO check transform pose
             {
                 // S_a
-                Vector3 saPos = localTransform.position;
-                Quaternion saRot = localTransform.rotation;
+                Vector3 saPos = localTransform_pos;
+                Quaternion saRot = localTransform_rot;
                 // P_b
-                Vector3 pbPos = hologramTransform.position;
-                Quaternion pbRot = hologramTransform.rotation;
+                Vector3 pbPos = hologramTransform_pos;
+                Quaternion pbRot = hologramTransform_rot;
 
                 int offset = 0;
 

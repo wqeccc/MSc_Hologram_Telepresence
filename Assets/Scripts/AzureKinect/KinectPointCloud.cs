@@ -20,7 +20,7 @@ public class KinectPointCloud : MonoBehaviour
     bool _texturesInitialized;
 
     public bool remesh;
-    public bool hideNonSkeletonPixels;
+    public bool hideNonSkeletonPixels = true;
 
     // Start is called before the first frame update
     void Start()
@@ -234,9 +234,9 @@ public class KinectPointCloud : MonoBehaviour
     }
     void PostKinectInit()
     {
-        _depthTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.RG16, false,true);
-        _colorTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.BGRA32, false,true);
-        _bodyIndexTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.Alpha8, false, true);
+        _depthTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.RG16, false, true);
+        _colorTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.BGRA32, false);
+        _bodyIndexTexture = new Texture2D(_kinectController.depthWidth, _kinectController.depthHeight, TextureFormat.Alpha8, false);
         _depthTexture.filterMode = FilterMode.Point;
         _colorTexture.filterMode = FilterMode.Point;
         if (remesh)
