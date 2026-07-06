@@ -291,7 +291,7 @@ public class PointCloudNetworkReceiver : MonoBehaviour
 
     void PostKinectInit()
     {
-        _depthTexture = new Texture2D(_depthWidth, _depthHeight, TextureFormat.RG16, false);
+        _depthTexture = new Texture2D(_depthWidth, _depthHeight, TextureFormat.RG16, false, true);
         _colorTexture = new Texture2D(_depthWidth, _depthHeight, TextureFormat.BGRA32, false);
         _bodyIndexTexture = new Texture2D(_depthWidth, _depthHeight, TextureFormat.Alpha8, false);
         _depthTexture.filterMode = FilterMode.Point;
