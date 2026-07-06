@@ -26,7 +26,7 @@ public class GazeAlignment : MonoBehaviour
     * P_a: local speaker hologram at b (S_a->b)
     * TODO: F_a, F_b (Capture Boundary)
     */
-    public void ExecuteAlgorithm(Transform S_a, Transform S_b, Transform P_b, Transform P_a)
+    public void ExecuteAlgorithm(Pose S_a, Pose S_b, Transform P_b, Pose P_a)
     {
         if (S_a == null || S_b == null || P_b == null || P_a == null) return;
 

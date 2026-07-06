@@ -22,10 +22,10 @@ public class RemoteHologram : MonoBehaviour
 
     [Header("Hologram Objects")]
     // a: local hologram space
-    public Transform localSpeaker; // S_a
-    public Transform remoteSpeaker; // S_b
+    public Pose localSpeaker; // S_a
+    public Pose remoteSpeaker; // S_b
     public Transform remoteSpeakerHologram; // P_b (S_b->a)
-    public Transform localHologramAtRemote; // P_a (S_a->b)
+    public Pose localHologramAtRemote; // P_a (S_a->b)
 
     void Start()
     {
@@ -118,13 +118,20 @@ public class RemoteHologram : MonoBehaviour
     {
         if (_mdSender != null && localSpeaker != null)
         {
-            _mdSender.localTransform = localSpeaker;
-            _mdSender.hologramTransform = remoteSpeakerHologram;
+            _mdSender.localTransform_pos = localSpeaker.position;
+            _mdSender.localTransform_rot = localSpeaker.rotation;
+            _mdSender.hologramTransform_pos = remoteSpeakerHologram.position;
+            _mdSender.hologramTransform_rot = remoteSpeakerHologram.rotation;
         }
     }
 
     void CalculatePlacementPosition()
     {
+        if (localSpeaker == null && remoteSpeakerHologram == null)
+        {
+            return;
+        }
+
         Vector3 forwardVec = localSpeaker.forward;
         forwardVec.y = 0;
         forwardVec.Normalize();
