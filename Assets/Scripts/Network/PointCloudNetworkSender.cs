@@ -17,7 +17,7 @@ public class PointCloudNetworkSender : MonoBehaviour
     private bool _running;
 
     private int frameCounter = 0;
-    private int kinectConfigSendFlag = 0;
+    private bool kinectConfigACK = false;
     private const int MAX_UDP_PACKET_SIZE = 60000; // maximum length of a single packet (less than 64 KB)
 
     void Start()
@@ -25,6 +25,7 @@ public class PointCloudNetworkSender : MonoBehaviour
         _kinectController = FindFirstObjectByType<KinectController>();
 
         _udpClient = new UdpClient();
+        _udpClient.Client.ReceiveTimeout = 1; // 0.001s (1ms)
         _running = true;
 
         _sendThread = new Thread(SendLoop);
@@ -36,22 +37,35 @@ public class PointCloudNetworkSender : MonoBehaviour
     {
         while (_running)
         {
-            // wait Kinect
-            // if (_kinectController == null || !_kinectController.kinectInitialized)
-            // {
-            //     Debug.LogWarning("Kinect not Initialized");
-            //     Thread.Sleep(100); // avoid empty loops that waste CPU
-            //     continue;
-            // }
+            IPEndPoint anyEP = new IPEndPoint(IPAddress.Any, 0);
 
-            // network configuration (packetID = -1)
-            if (kinectConfigSendFlag < 3)
+            if (!kinectConfigACK)
             {
-                SendKinectConfig();
-                // prevent packet loss 
-                kinectConfigSendFlag++;
-                Thread.Sleep(1000);
-                continue;
+                try
+                {
+                    while (_udpClient.Available > 0)
+                    {
+                        byte[] ackPacket = _udpClient.Receive(ref anyEP);
+                        if (ackPacket.Length > 0 && ackPacket[0] == 0x99) 
+                        {
+                            kinectConfigACK = true;
+                            Debug.Log("Receiver confirmed. Starting point cloud stream");
+                            break;
+                        }
+                    }
+                }
+                catch (SocketException)
+                {
+                    // Debug.Log("timeout");
+                }
+
+                if (!kinectConfigACK)
+                {
+                    // network configuration (packetID = -1)
+                    SendKinectConfig();
+                    Thread.Sleep(300); // 0.3s
+                    continue;
+                }
             }
 
             // point cloud data

@@ -98,12 +98,15 @@ public class PointCloudNetworkReceiver : MonoBehaviour
                 // kinect configuration
                 if (packetID == -1)
                 {
-                    // sender will send 3 times (wait for 3 seconds) in case receiver is not ready (TODO: handshake？)
                     if (!_configReceived)
                     {
                         ParseKinectConfig(rawPacket);
                         Debug.Log("Received kinect config");
                     }
+
+                    byte[] ackData = new byte[] { 0x99 };
+                    _udpClient.Send(ackData, ackData.Length, remoteEP);
+
                     continue;
                 }
 
