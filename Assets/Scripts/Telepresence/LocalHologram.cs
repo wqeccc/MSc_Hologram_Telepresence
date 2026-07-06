@@ -12,6 +12,7 @@ public class LocalHologram : MonoBehaviour
     private KinectController _kinectController;
     private PointCloudNetworkSender _networkSender;
     private bool attachedSender = false;
+    private bool lastRenderLocalUserFlag = false;
 
     void Start()
     {
@@ -48,20 +49,18 @@ public class LocalHologram : MonoBehaviour
             RemovePointCloudObject();
     }
 
-    void OnValidate()
-    {
-        if (Application.isPlaying)
-        {
-            RenderLocalUserHandler(renderLocalUser);
-        }
-    }
-
     void Update()
     {
         if (_kinectController == null || !_kinectController.kinectInitialized)
         {
             Debug.LogWarning("Kinect not Initialized");
             return;
+        }
+
+        if (renderLocalUser != lastRenderLocalUserFlag)
+        {
+            RenderLocalUserHandler(renderLocalUser);
+            lastRenderLocalUserFlag = renderLocalUser;
         }
 
         if (sendData && _networkSender == null && attachedSender == false)

@@ -63,13 +63,15 @@ public class RemoteHologram : MonoBehaviour
         }
 
         UpdateLocalUserPosition();
-        UpdateSenderData();
+        CalculatePlacementPosition();
 
         if (enableGazeAlignment)
         {
             // S_a, S_b, P_b, P_a
             _gazeAlignment.ExecuteAlgorithm(localSpeaker, remoteSpeaker, remoteSpeakerHologram, localHologramAtRemote);
         }
+
+        UpdateSenderData();
     }
 
     void UpdateLocalUserPosition()
@@ -119,5 +121,24 @@ public class RemoteHologram : MonoBehaviour
             _mdSender.localTransform = localSpeaker;
             _mdSender.hologramTransform = remoteSpeakerHologram;
         }
+    }
+
+    void CalculatePlacementPosition()
+    {
+        Vector3 forwardVec = localSpeaker.forward;
+        forwardVec.y = 0;
+        forwardVec.Normalize();
+
+        float distance = 1.5f; // comfortable social distances: 1.2m-3.7m
+        Vector3 targetPosXZ = localSpeaker.position + forwardVec * distance;
+
+        // TODO 
+        // y controller / plane / floor
+        float hologramPosY = 0f;
+        remoteSpeakerHologram.position = new Vector3(targetPosXZ.x, hologramPosY, targetPosXZ.z);
+
+        // TODO
+        // default scale = (h_local - h_hologram_placement) / h_remote
+        // remoteSpeakerHologram.localScale = new Vector3(targetPosXZ.x, hologramPosY, targetPosXZ.z);
     }
 }
