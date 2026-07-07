@@ -97,6 +97,11 @@ public class PointCloudNetworkSender : MonoBehaviour
 
     private void SendKinectConfig()
     {
+        if (_kinectController?.calibrationTable == null)
+        {
+            return; 
+        }
+
         Debug.Log("Sending config: " + targetIP + " " + targetPort);
 
         int height = _kinectController.depthHeight;
