@@ -105,9 +105,12 @@ public class RemoteHologram : MonoBehaviour
         }
 
         UpdateLocalUserPosition();
-        CalculatePlacementPosition();
 
-        if (enableGazeAlignment)
+        if (!initHologramPos)
+        {
+            CalculatePlacementPosition();
+        }
+        else if (enableGazeAlignment)
         {
             // S_a, S_b, P_b, P_a
             _gazeAlignment.ExecuteAlgorithm(localSpeaker, remoteSpeaker, remoteSpeakerHologram, localHologramAtRemote);
@@ -174,30 +177,28 @@ public class RemoteHologram : MonoBehaviour
             return;
         }
 
-        // default position
-        if (!initHologramPos)
-        {
-            Vector3 forwardVec = localSpeaker.forward;
-            forwardVec.y = 0;
-            forwardVec.Normalize();
+        // calculate the default position of hologram
+        Vector3 forwardVec = localSpeaker.forward;
+        forwardVec.y = 0;
+        forwardVec.Normalize();
 
-            float distance = 1.5f; // comfortable social distances: 1.2m-3.7m
-            Vector3 targetPosXZ = localSpeaker.position + forwardVec * distance;
+        float distance = 1.5f; // comfortable social distances: 1.2m-3.7m
+        Vector3 targetPosXZ = localSpeaker.position + forwardVec * distance;
 
-            // assume the heights (HMDs) are the same
-            float defaultY = localSpeaker.position.y - remoteSpeaker.position.y;
-            Vector3 initialPos = new Vector3(targetPosXZ.x, defaultY, targetPosXZ.z);
+        // assume the heights (HMDs) are the same
+        float defaultY = localSpeaker.position.y - remoteSpeaker.position.y;
+        Vector3 initialPos = new Vector3(targetPosXZ.x, defaultY, targetPosXZ.z);
 
-            #if !UNITY_EDITOR && UNITY_ANDROID
-                PlaneDetection(initialPos);
-            #else
-                remoteSpeakerHologram.position = initialPos;
-            #endif
+        #if !UNITY_EDITOR && UNITY_ANDROID
+            PlaneDetection(initialPos);
+        #else
+            remoteSpeakerHologram.position = initialPos;
+        #endif
 
-            initHologramPos = true;
-            Debug.Log("Inintialized hologram default position");
-            return;
-        }
+        HeightScaling();
+
+        initHologramPos = true;
+        Debug.Log("Inintialized hologram default position");
 
         // TODO
         // placing with controller/gesture
@@ -205,11 +206,16 @@ public class RemoteHologram : MonoBehaviour
         // raycast hit??
         // #if !UNITY_EDITOR && UNITY_ANDROID
         // #endif
+    }
 
-        // TODO
-        // height scaling
-        // default scale = (h_local - h_hologram_placement) / h_remote
-        // remoteSpeakerHologram.localScale = new Vector3(targetPosXZ.x, hologramPosY, targetPosXZ.z);
+    void HeightScaling()
+    {
+        // scale = (h_local - h_hologram_placement) / h_remote
+        float heightDiff = localSpeaker.position.y - remoteSpeakerHologram.position.y;
+        float scale = heightDiff / remoteSpeaker.position.y;
+        scale = Mathf.Clamp(scale, 0.1f, 2.0f);
+
+        remoteSpeakerHologram.localScale = new Vector3(scale, scale, scale);
     }
 
     #if !UNITY_EDITOR && UNITY_ANDROID
