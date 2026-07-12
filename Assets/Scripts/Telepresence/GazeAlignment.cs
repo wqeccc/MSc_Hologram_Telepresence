@@ -48,11 +48,16 @@ public class GazeAlignment : MonoBehaviour
             
             // apply the rotation difference to the hologram
             P_b.rotation = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
+
+            // TODO
+            // float smoothSpeed = 5.0f;
+            // float t = 1.0f - Mathf.Exp(-smoothSpeed * Time.deltaTime);
+            // P_b.rotation = Quaternion.Slerp(P_b.rotation, rotation, t);
         }
         
         // calculate vertical height differences
-        float localDeltaY = S_a.position.y - P_b.position.y;  
-        float remoteDeltaY = S_b.position.y - P_a.position.y; 
+        float localDeltaY = Mathf.Abs(Eh.y);
+        float remoteDeltaY = Mathf.Abs(Eb.y); 
 
         if (Mathf.Abs(remoteDeltaY) < 1e-3f) remoteDeltaY = 1e-3f;
         if (Mathf.Abs(localDeltaY) < 1e-3f) localDeltaY = 1e-3f;
@@ -89,8 +94,12 @@ public class GazeAlignment : MonoBehaviour
             finalScale = 1.0f;
         }
 
-        // apply scaling
-        calculatedFinalScale = finalScale;        
-        P_b.localScale = new Vector3(finalScale, finalScale, finalScale); // maintain realistic body proportions
+        calculatedFinalScale = finalScale;
+
+        // apply scaling smoothly while maintaining realistic body proportions
+        float smoothSpeed = 5.0f;
+        float t = 1.0f - Mathf.Exp(-smoothSpeed * Time.deltaTime);
+        Vector3 scaleVec = new Vector3(finalScale, finalScale, finalScale);
+        P_b.localScale = Vector3.Lerp(P_b.localScale, scaleVec, t);
     }
 }
