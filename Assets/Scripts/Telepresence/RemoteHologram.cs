@@ -7,15 +7,6 @@ using Microsoft.Azure.Kinect.Sensor;
 using Microsoft.Azure.Kinect.BodyTracking;
 #endif
 
-#if !UNITY_EDITOR && UNITY_ANDROID
-using UnityEngine.XR.OpenXR;
-using UnityEngine.XR.ARFoundation;
-using UnityEngine.XR.ARSubsystems;
-using MagicLeap.OpenXR.Features.Planes;
-using MagicLeap.OpenXR.Subsystems;
-// using UnityEngine.InputSystem;
-#endif
-
 public class RemoteHologram : MonoBehaviour
 {
     private MetaDataNetworkSender _mdSender;
@@ -25,6 +16,10 @@ public class RemoteHologram : MonoBehaviour
 
     #if UNITY_EDITOR || UNITY_STANDALONE_WIN
         private KinectController _kinectController;
+    #endif
+
+    #if !UNITY_EDITOR && UNITY_ANDROID
+        private ML2Layer _ml2Layer;
     #endif
 
     public bool enableGazeAlignment = true;
@@ -39,46 +34,25 @@ public class RemoteHologram : MonoBehaviour
     private bool initHologramPos = false;
 
     #if !UNITY_EDITOR && UNITY_ANDROID
-        private ARPlaneManager planeManager;
-        private MagicLeapPlanesFeature planeFeature;
-        [SerializeField]
-        private uint maxResults = 100; // Maximum number of planes to return each query
-        [SerializeField]
-        private float minPlaneArea = 0.09f; // Minimum plane area to treat as a valid plane (m^2)
-        private bool permissionGranted = false;
-        // private MagicLeapController Controller => MagicLeapController.Instance;
+    private bool isDraggingHologram = false;
+    private float dragDistance;
+    private BoxCollider remoteHologramCollider;
     #endif
 
-    IEnumerator Start()
+    void Start()
     {
         #if UNITY_EDITOR || UNITY_STANDALONE_WIN
             _kinectController = FindObjectOfType<KinectController>();
+        #endif
+
+        #if !UNITY_EDITOR && UNITY_ANDROID
+            _ml2Layer = FindObjectOfType<ML2Layer>();
         #endif
 
         _pcReceiver = gameObject.AddComponent<PointCloudNetworkReceiver>();
         _mdReceiver = gameObject.AddComponent<MetaDataNetworkReceiver>();
         _mdSender = gameObject.AddComponent<MetaDataNetworkSender>();
         _gazeAlignment = gameObject.AddComponent<GazeAlignment>();
-
-        #if !UNITY_EDITOR && UNITY_ANDROID
-            // wait until the subsystem ready
-            yield return new WaitUntil(Utils.AreSubsystemsLoaded<XRPlaneSubsystem>);
-            planeManager = FindObjectOfType<ARPlaneManager>();
-            if (planeManager == null)
-            {
-                Debug.LogError("Failed to find ARPlaneManager in scene. Disabling Script");
-                enabled = false; // stop script
-            }
-            else
-            {
-                // disable planeManager until we have successfully requested required permissions
-                planeManager.enabled = false;
-            }
-
-            Permissions.RequestPermission(Permissions.SpatialMapping, OnPermissionGranted, OnPermissionDenied);
-        #endif
-
-        yield return null;
     }
 
     void Update()
@@ -102,6 +76,10 @@ public class RemoteHologram : MonoBehaviour
         if (_pcReceiver != null && remoteSpeakerHologram == null)
         {
             remoteSpeakerHologram = _pcReceiver.GetRemoteSpeakerTransform;
+
+            #if !UNITY_EDITOR && UNITY_ANDROID
+                remoteHologramCollider = remoteSpeakerHologram.GetComponent<BoxCollider>();
+            #endif
         }
 
         UpdateLocalUserPosition();
@@ -110,10 +88,24 @@ public class RemoteHologram : MonoBehaviour
         {
             CalculatePlacementPosition();
         }
-        else if (enableGazeAlignment)
+        else
         {
-            // S_a, S_b, P_b, P_a
-            _gazeAlignment.ExecuteAlgorithm(localSpeaker, remoteSpeaker, remoteSpeakerHologram, localHologramAtRemote);
+            if (enableGazeAlignment)
+            {
+                // S_a, S_b, P_b, P_a
+                _gazeAlignment.ExecuteAlgorithm(localSpeaker, remoteSpeaker, remoteSpeakerHologram, localHologramAtRemote);
+            }
+
+            #if !UNITY_EDITOR && UNITY_ANDROID
+                if (_ml2Layer.isDragging)
+                {
+                    HandleHologramDragging();
+                }
+                else
+                {
+                    isDraggingHologram = false;
+                }
+            #endif
         }
 
         UpdateSenderData();
@@ -190,7 +182,7 @@ public class RemoteHologram : MonoBehaviour
         Vector3 initialPos = new Vector3(targetPosXZ.x, defaultY, targetPosXZ.z);
 
         #if !UNITY_EDITOR && UNITY_ANDROID
-            PlaneDetection(initialPos);
+            remoteSpeakerHologram.position = _ml2Layer.PlaneDetection(initialPos);
         #else
             remoteSpeakerHologram.position = initialPos;
         #endif
@@ -199,13 +191,6 @@ public class RemoteHologram : MonoBehaviour
 
         initHologramPos = true;
         Debug.Log("Inintialized hologram default position");
-
-        // TODO
-        // placing with controller/gesture
-        // PlaneDetection
-        // raycast hit??
-        // #if !UNITY_EDITOR && UNITY_ANDROID
-        // #endif
     }
 
     void HeightScaling()
@@ -219,89 +204,35 @@ public class RemoteHologram : MonoBehaviour
     }
 
     #if !UNITY_EDITOR && UNITY_ANDROID
-    void PlaneDetection(Vector3 pos)
-    {   
-        if (planeManager != null && !permissionGranted)
-        { 
-            remoteSpeakerHologram.position = pos;
-            return;
+    void HandleHologramDragging()
+    {
+        if (remoteHologramCollider == null)
+        {
+            remoteHologramCollider = remoteSpeakerHologram.GetComponent<BoxCollider>();
         }
 
-        float finalY = pos.y; 
-        bool foundPlane = false;
-
-        foreach (var plane in planeManager.trackables)
+        if (!isDraggingHologram)
         {
-            // check if the pos is inside this plane
-            Vector2 pointInPlaneSpace = plane.transform.InverseTransformPoint(pos);
-                
-            if (Mathf.Abs(pointInPlaneSpace.x) <= plane.extents.x && Mathf.Abs(pointInPlaneSpace.y) <= plane.extents.y)
+            Vector3 rayStart = _ml2Layer.PointerPosition;
+            Vector3 rayDir = _ml2Layer.PointerRotation * Vector3.forward;
+            Ray ray = new Ray(rayStart, rayDir);
+
+            // hit hologram
+            if (remoteHologramCollider.Raycast(ray, out RaycastHit hit, 10f))
             {
-                // ref: https://docs.unity3d.com/Packages/com.unity.xr.arfoundation@6.0/api/UnityEngine.XR.ARSubsystems.PlaneClassifications.html
-                switch (plane.classifications)
-                {
-                    case PlaneClassifications.Table:
-                    case PlaneClassifications.Floor:
-                    case PlaneClassifications.Seat:
-                    case PlaneClassifications.Couch:
-                    case PlaneClassifications.SeatOfAnyType:     
-                        finalY = plane.transform.position.y;
-                        foundPlane = true;
-                        break;
-
-                    default:
-                        break;
-                }
-
-                if (foundPlane) break;
+                isDraggingHologram = true;
+                dragDistance = Vector3.Distance(rayStart, remoteSpeakerHologram.position);
             }
         }
-
-        remoteSpeakerHologram.position = new Vector3(pos.x, finalY, pos.z);
-
-        StartCoroutine(StopPlanesScanning());
-    }
-
-    void StartPlanesScanning()
-    {
-        var newQuery = new MLXrPlaneSubsystem.PlanesQuery
+        else
         {
-            Flags = planeManager.requestedDetectionMode.ToMLXrQueryFlags() | MLXrPlaneSubsystem.MLPlanesQueryFlags.SemanticAll,
-            BoundsCenter = Camera.main.transform.position,
-            BoundsRotation = Camera.main.transform.rotation,
-            BoundsExtents = Vector3.one * 20f,
-            MaxResults = maxResults,
-            MinPlaneArea = minPlaneArea
-        };
+            Vector3 rayStart = _ml2Layer.PointerPosition;
+            Vector3 rayDir = _ml2Layer.PointerRotation * Vector3.forward;
+            Vector3 targetPos = rayStart + rayDir * dragDistance;
 
-        MLXrPlaneSubsystem.Query = newQuery;
-        planeManager.enabled = true;
-        Debug.Log("Start scanning planes");
-    }
-
-    IEnumerator StopPlanesScanning()
-    {
-        if (planeFeature != null && planeFeature.enabled)
-        {
-            planeFeature.InvalidateCurrentPlanes();
+            remoteSpeakerHologram.position = _ml2Layer.PlaneDetection(targetPos);
+            HeightScaling();
         }
-        // Skip a frame for the changes to take effect and prefabs get removed.
-        yield return new WaitForEndOfFrame();
-        planeManager.enabled = false;
-        Debug.Log("Stop scanning planes");
-    }
-
-    void OnPermissionGranted(string permission)
-    {   
-        StartPlanesScanning();
-        permissionGranted = true;
-        planeFeature = OpenXRSettings.Instance.GetFeature<MagicLeapPlanesFeature>();
-    }
-
-    void OnPermissionDenied(string permission)
-    {
-        Debug.LogError($"Failed to create Planes Subsystem due to missing or denied {Permissions.SpatialMapping} permission. Please add to manifest. Disabling script.");
-        enabled = false;
     }
     #endif
 }
