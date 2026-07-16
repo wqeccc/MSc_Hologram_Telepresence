@@ -14,6 +14,8 @@ public class GazeAlignment : MonoBehaviour
         Case3_ForcedUpscale            // local can not downscale -> done
     }
 
+    public float smoothSpeed = 5.0f;
+
     [Header("Algorithm Status")]
     public ScalingCase currentScenario;
     public float calculatedFinalScale = 1.0f;
@@ -39,20 +41,24 @@ public class GazeAlignment : MonoBehaviour
         Vector3 Eb_xz = new Vector3(Eb.x, 0f, Eb.z);
         Vector3 Eh_xz = new Vector3(Eh.x, 0f, Eh.z);
 
+        float t = 1.0f - Mathf.Exp(-smoothSpeed * Time.deltaTime);
+
         // avoid division by zero (1e-3f as safety threshold)
         if (Eb_xz.sqrMagnitude > 1e-3f && Eh_xz.sqrMagnitude > 1e-3f) 
         {
             // guarantee face-to-face conditions (Eb should align with -Eh)
             // the rotation difference between Eb and the inverse of Eh.
             Quaternion targetRotation = Quaternion.FromToRotation(Eb_xz.normalized, -Eh_xz.normalized);
-            
-            // apply the rotation difference to the hologram
-            P_b.rotation = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
+            // apply the rotation difference to the hologram (y axis)
+            Quaternion finalRot = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
+
+            // lerp smoothing
+            P_b.rotation = Quaternion.Slerp(P_b.rotation, finalRot, t);
         }
         
         // calculate vertical height differences
-        float localDeltaY = S_a.position.y - P_b.position.y;  
-        float remoteDeltaY = S_b.position.y - P_a.position.y; 
+        float localDeltaY = Mathf.Abs(Eh.y);
+        float remoteDeltaY = Mathf.Abs(Eb.y); 
 
         if (Mathf.Abs(remoteDeltaY) < 1e-3f) remoteDeltaY = 1e-3f;
         if (Mathf.Abs(localDeltaY) < 1e-3f) localDeltaY = 1e-3f;
@@ -89,8 +95,10 @@ public class GazeAlignment : MonoBehaviour
             finalScale = 1.0f;
         }
 
-        // apply scaling
-        calculatedFinalScale = finalScale;        
-        P_b.localScale = new Vector3(finalScale, finalScale, finalScale); // maintain realistic body proportions
+        calculatedFinalScale = finalScale;
+
+        // apply scaling smoothly while maintaining realistic body proportions
+        Vector3 scaleVec = new Vector3(finalScale, finalScale, finalScale);
+        P_b.localScale = Vector3.Lerp(P_b.localScale, scaleVec, t);
     }
 }

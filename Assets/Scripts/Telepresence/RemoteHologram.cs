@@ -15,7 +15,11 @@ public class RemoteHologram : MonoBehaviour
     private GazeAlignment _gazeAlignment;
 
     #if UNITY_EDITOR || UNITY_STANDALONE_WIN
-    private KinectController _kinectController;
+        private KinectController _kinectController;
+    #endif
+
+    #if !UNITY_EDITOR && UNITY_ANDROID
+        private ML2Layer _ml2Layer;
     #endif
 
     public bool enableGazeAlignment = true;
@@ -27,10 +31,22 @@ public class RemoteHologram : MonoBehaviour
     public Transform remoteSpeakerHologram; // P_b (S_b->a)
     public Pose localHologramAtRemote; // P_a (S_a->b)
 
+    private bool initHologramPos = false;
+
+    #if !UNITY_EDITOR && UNITY_ANDROID
+    private bool isDraggingHologram = false;
+    private float dragDistance;
+    private BoxCollider remoteHologramCollider;
+    #endif
+
     void Start()
     {
         #if UNITY_EDITOR || UNITY_STANDALONE_WIN
-        _kinectController = FindFirstObjectByType<KinectController>();
+            _kinectController = FindFirstObjectByType<KinectController>();
+        #endif
+
+        #if !UNITY_EDITOR && UNITY_ANDROID
+            _ml2Layer = FindFirstObjectByType<ML2Layer>();
         #endif
 
         _pcReceiver = gameObject.AddComponent<PointCloudNetworkReceiver>();
@@ -42,11 +58,11 @@ public class RemoteHologram : MonoBehaviour
     void Update()
     {
         #if UNITY_EDITOR || UNITY_STANDALONE_WIN
-        if (_kinectController == null || !_kinectController.kinectInitialized)
-        {
-            Debug.LogWarning("Kinect not Initialized");
-            return;
-        }
+            if (_kinectController == null || !_kinectController.kinectInitialized)
+            {
+                Debug.LogWarning("Kinect not Initialized");
+                return;
+            }
         #endif
 
         if (_mdReceiver != null)
@@ -60,15 +76,36 @@ public class RemoteHologram : MonoBehaviour
         if (_pcReceiver != null && remoteSpeakerHologram == null)
         {
             remoteSpeakerHologram = _pcReceiver.GetRemoteSpeakerTransform;
+
+            #if !UNITY_EDITOR && UNITY_ANDROID
+                remoteHologramCollider = remoteSpeakerHologram.GetComponent<BoxCollider>();
+            #endif
         }
 
         UpdateLocalUserPosition();
-        CalculatePlacementPosition();
 
-        if (enableGazeAlignment)
+        if (!initHologramPos)
         {
-            // S_a, S_b, P_b, P_a
-            _gazeAlignment.ExecuteAlgorithm(localSpeaker, remoteSpeaker, remoteSpeakerHologram, localHologramAtRemote);
+            CalculatePlacementPosition();
+        }
+        else
+        {
+            if (enableGazeAlignment)
+            {
+                // S_a, S_b, P_b, P_a
+                _gazeAlignment.ExecuteAlgorithm(localSpeaker, remoteSpeaker, remoteSpeakerHologram, localHologramAtRemote);
+            }
+
+            #if !UNITY_EDITOR && UNITY_ANDROID
+                if (_ml2Layer.isDragging)
+                {
+                    HandleHologramDragging();
+                }
+                else
+                {
+                    isDraggingHologram = false;
+                }
+            #endif
         }
 
         UpdateSenderData();
@@ -116,7 +153,7 @@ public class RemoteHologram : MonoBehaviour
 
     void UpdateSenderData()
     {
-        if (_mdSender != null && localSpeaker != null)
+        if (_mdSender != null && localSpeaker != null && remoteSpeakerHologram != null)
         {
             _mdSender.localTransform_pos = localSpeaker.position;
             _mdSender.localTransform_rot = localSpeaker.rotation;
@@ -127,11 +164,12 @@ public class RemoteHologram : MonoBehaviour
 
     void CalculatePlacementPosition()
     {
-        if (localSpeaker == null && remoteSpeakerHologram == null)
+        if (localSpeaker == null || remoteSpeakerHologram == null || remoteSpeaker == null || remoteSpeaker.position.y < 0.1f)
         {
             return;
         }
 
+        // calculate the default position of hologram
         Vector3 forwardVec = localSpeaker.forward;
         forwardVec.y = 0;
         forwardVec.Normalize();
@@ -139,13 +177,62 @@ public class RemoteHologram : MonoBehaviour
         float distance = 1.5f; // comfortable social distances: 1.2m-3.7m
         Vector3 targetPosXZ = localSpeaker.position + forwardVec * distance;
 
-        // TODO 
-        // y controller / plane / floor
-        float hologramPosY = 0f;
-        remoteSpeakerHologram.position = new Vector3(targetPosXZ.x, hologramPosY, targetPosXZ.z);
+        // assume the heights (HMDs) are the same
+        float defaultY = localSpeaker.position.y - remoteSpeaker.position.y;
+        Vector3 initialPos = new Vector3(targetPosXZ.x, defaultY, targetPosXZ.z);
 
-        // TODO
-        // default scale = (h_local - h_hologram_placement) / h_remote
-        // remoteSpeakerHologram.localScale = new Vector3(targetPosXZ.x, hologramPosY, targetPosXZ.z);
+        #if !UNITY_EDITOR && UNITY_ANDROID
+            remoteSpeakerHologram.position = _ml2Layer.PlaneDetection(initialPos);
+        #else
+            remoteSpeakerHologram.position = initialPos;
+        #endif
+
+        HeightScaling();
+
+        initHologramPos = true;
+        Debug.Log("Inintialized hologram default position");
     }
+
+    void HeightScaling()
+    {
+        // scale = (h_local - h_hologram_placement) / h_remote
+        float heightDiff = localSpeaker.position.y - remoteSpeakerHologram.position.y;
+        float scale = heightDiff / remoteSpeaker.position.y;
+        scale = Mathf.Clamp(scale, 0.1f, 2.0f);
+
+        remoteSpeakerHologram.localScale = new Vector3(scale, scale, scale);
+    }
+
+    #if !UNITY_EDITOR && UNITY_ANDROID
+    void HandleHologramDragging()
+    {
+        if (remoteHologramCollider == null)
+        {
+            remoteHologramCollider = remoteSpeakerHologram.GetComponent<BoxCollider>();
+        }
+
+        if (!isDraggingHologram)
+        {
+            Vector3 rayStart = _ml2Layer.PointerPosition;
+            Vector3 rayDir = _ml2Layer.PointerRotation * Vector3.forward;
+            Ray ray = new Ray(rayStart, rayDir);
+
+            // hit hologram
+            if (remoteHologramCollider.Raycast(ray, out RaycastHit hit, 10f))
+            {
+                isDraggingHologram = true;
+                dragDistance = Vector3.Distance(rayStart, remoteSpeakerHologram.position);
+            }
+        }
+        else
+        {
+            Vector3 rayStart = _ml2Layer.PointerPosition;
+            Vector3 rayDir = _ml2Layer.PointerRotation * Vector3.forward;
+            Vector3 targetPos = rayStart + rayDir * dragDistance;
+
+            remoteSpeakerHologram.position = _ml2Layer.PlaneDetection(targetPos);
+            HeightScaling();
+        }
+    }
+    #endif
 }
