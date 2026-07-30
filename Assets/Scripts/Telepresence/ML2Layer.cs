@@ -33,7 +33,7 @@ public class ML2Layer : MonoBehaviour
     {
         // wait until the subsystem ready
         yield return new WaitUntil(AreSubsystemsLoaded<XRPlaneSubsystem>);
-        planeManager = FindObjectOfType<ARPlaneManager>();
+        planeManager = FindAnyObjectByType<ARPlaneManager>();
         if (planeManager == null)
         {
             Debug.LogError("Failed to find ARPlaneManager in scene. Disabling Script");
@@ -80,7 +80,7 @@ public class ML2Layer : MonoBehaviour
 
     void InitController()
     {
-        var manager = UnityEngine.Object.FindObjectOfType<InputActionManager>();
+        var manager = UnityEngine.Object.FindAnyObjectByType<InputActionManager>();
         if (manager == null)
             throw new NullReferenceException("Could not find an InputActionManager to initialize a MagicLeapController from");
 
