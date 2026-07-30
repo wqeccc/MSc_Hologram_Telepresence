@@ -71,6 +71,10 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         _remoteSpeakerObj.transform.localRotation = Quaternion.identity;
         _remoteSpeakerObj.transform.localScale = Vector3.one;
 
+        BoxCollider boxCollider = _remoteSpeakerObj.AddComponent<BoxCollider>();
+        boxCollider.center = new Vector3(0, 0, 4.5f);
+        boxCollider.size = new Vector3(5, 5, 5);
+
         _networkThread = new Thread(networkLoop);
         _networkThread.IsBackground = true;
         _networkThread.Start();
@@ -246,7 +250,7 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         }
     }
 
-    private void initializePointCloudData()
+    private void initializePointCloudData_old()
     {
         _renderMaterial = Resources.Load("Materials/cloudmatDepth") as Material;
         List<Vector3> points = new List<Vector3>();
@@ -287,6 +291,96 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         afinal.transform.localRotation = Quaternion.identity;
         afinal.transform.localScale = Vector3.one;
         _cloudGameObjs.Add(afinal);
+    }
+
+    private void initializePointCloudData()
+    {
+        _renderMaterial = Resources.Load("Materials/hologramMat") as Material;
+        
+        List<Vector3> points = new List<Vector3>();
+        List<Vector2> uv0s = new List<Vector2>(); // Kinect uv
+        List<Vector2> uv1s = new List<Vector2>(); // quad
+        List<int> ind = new List<int>(); // mesh triangle index
+        
+        // n: vertex index, i: gameObject index
+        int n = 0, i = 0;
+
+        // pixels
+        for (float w = 0; w < _depthWidth; w++)
+        {
+            for (float h = 0; h < _depthHeight; h++)
+            {
+                // normalized coordinates
+                float u = w / _depthWidth;
+                float v = h / _depthHeight;
+                Vector2 kinectUV = new Vector2(u, v);
+
+                // 4 vertices of a quad
+                points.Add(Vector3.zero); uv0s.Add(kinectUV);
+                points.Add(Vector3.zero); uv0s.Add(kinectUV);
+                points.Add(Vector3.zero); uv0s.Add(kinectUV);
+                points.Add(Vector3.zero); uv0s.Add(kinectUV);
+
+                uv1s.Add(new Vector2(0, 0)); // bottom-left
+                uv1s.Add(new Vector2(1, 0)); // bottom-right
+                uv1s.Add(new Vector2(0, 1)); // top-left
+                uv1s.Add(new Vector2(1, 1)); // top-right
+
+                /**
+                 * clockwise
+                 *   2 __ 3
+                 *   |    |
+                 *   0 __ 1 
+                 */
+                ind.Add(n + 0); ind.Add(n + 2); ind.Add(n + 1);
+                ind.Add(n + 2); ind.Add(n + 3); ind.Add(n + 1);
+                
+                // next quad
+                n += 4;
+
+                if (n >= 65000)
+                {
+                    CreateCloudGameObject(points, uv0s, uv1s, ind, i);
+                    n = 0; i++;
+                    points = new List<Vector3>();
+                    uv0s = new List<Vector2>();
+                    uv1s = new List<Vector2>();
+                    ind = new List<int>();
+                }
+            }
+        }
+
+        // handles rest points
+        if (points.Count > 0)
+        {
+            CreateCloudGameObject(points, uv0s, uv1s, ind, i);
+        }
+    }
+
+    private void CreateCloudGameObject(List<Vector3> points, List<Vector2> uv0s, List<Vector2> uv1s, List<int> ind, int index)
+    {
+        GameObject a = new GameObject("cloud" + index);
+        Mesh mesh = new Mesh();
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        
+        mesh.vertices = points.ToArray();
+        mesh.SetUVs(0, uv0s); // Shader TEXCOORD0
+        mesh.SetUVs(1, uv1s); // Shader TEXCOORD1
+        
+        // MeshTopology.Points -> MeshTopology.Triangles
+        mesh.SetIndices(ind.ToArray(), MeshTopology.Triangles, 0); 
+        mesh.bounds = new Bounds(new Vector3(0, 0, 4.5f), new Vector3(5, 5, 5));
+        mesh.UploadMeshData(true); 
+
+        a.AddComponent<MeshFilter>().mesh = mesh;
+        a.AddComponent<MeshRenderer>().material = _renderMaterial;
+
+        a.transform.parent = _remoteSpeakerObj.transform;
+        a.transform.localPosition = Vector3.zero;
+        a.transform.localRotation = Quaternion.identity;
+        a.transform.localScale = Vector3.one;
+        
+        _cloudGameObjs.Add(a);
     }
 
     void PostKinectInit()
