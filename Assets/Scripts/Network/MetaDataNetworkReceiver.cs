@@ -7,7 +7,7 @@ using UnityEngine;
 public class MetaDataNetworkReceiver : MonoBehaviour
 {
     [Header("Network Settings")]
-    public int localListeningPort = 8081;
+    public int localListeningPort = 50052;
 
     private UdpClient _udpClient;
     private Thread _networkThread;

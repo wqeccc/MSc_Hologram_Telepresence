@@ -46,7 +46,7 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     private bool _configReceived = false;
 
     public bool hideNonSkeletonPixels = true;
-    public int listeningPort = 8080;
+    public int listeningPort = 50051;
 
     private GameObject _remoteSpeakerObj;
     public Transform GetRemoteSpeakerTransform => _remoteSpeakerObj != null ? _remoteSpeakerObj.transform : null;
