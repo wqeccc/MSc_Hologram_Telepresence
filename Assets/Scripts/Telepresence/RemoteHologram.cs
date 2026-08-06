@@ -18,10 +18,10 @@ public class RemoteHologram : MonoBehaviour
         private KinectController _kinectController;
     #endif
 
-    #if !UNITY_EDITOR && UNITY_ANDROID
-        private ML2Layer _ml2Layer;
-        private bool _wasAttachedLastFrame = false;
-    #endif
+    // #if !UNITY_EDITOR && UNITY_ANDROID
+    //     private ML2Layer _ml2Layer;
+    //     private bool _wasAttachedLastFrame = false;
+    // #endif
 
     public bool enableGazeAlignment = true;
 
@@ -40,9 +40,9 @@ public class RemoteHologram : MonoBehaviour
             _kinectController = FindObjectOfType<KinectController>();
         #endif
 
-        #if !UNITY_EDITOR && UNITY_ANDROID
-            _ml2Layer = FindObjectOfType<ML2Layer>();
-        #endif
+        // #if !UNITY_EDITOR && UNITY_ANDROID
+        //     _ml2Layer = FindFirstObjectByType<ML2Layer>();
+        // #endif
 
         _pcReceiver = gameObject.AddComponent<PointCloudNetworkReceiver>();
         _mdReceiver = gameObject.AddComponent<MetaDataNetworkReceiver>();
@@ -87,9 +87,9 @@ public class RemoteHologram : MonoBehaviour
                 _gazeAlignment.ExecuteAlgorithm(localSpeaker, remoteSpeaker, remoteSpeakerHologram, localHologramAtRemote);
             }
 
-            #if !UNITY_EDITOR && UNITY_ANDROID
-                HandleHologramAttachment();
-            #endif
+            // #if !UNITY_EDITOR && UNITY_ANDROID
+            //     HandleHologramAttachment();
+            // #endif
         }
 
         UpdateSenderData();
@@ -148,7 +148,7 @@ public class RemoteHologram : MonoBehaviour
 
     void CalculatePlacementPosition()
     {
-        if (localSpeaker == null || remoteSpeakerHologram == null || remoteSpeaker == null || remoteSpeaker.position.y < 0.1f)
+        if (localSpeaker == null || remoteSpeakerHologram == null || remoteSpeaker == null)
         {
             return;
         }
@@ -165,11 +165,11 @@ public class RemoteHologram : MonoBehaviour
         float defaultY = localSpeaker.position.y - remoteSpeaker.position.y;
         Vector3 initialPos = new Vector3(targetPosXZ.x, defaultY, targetPosXZ.z);
 
-        #if !UNITY_EDITOR && UNITY_ANDROID
-            remoteSpeakerHologram.position = _ml2Layer.PlaneDetection(initialPos);
-        #else
+        // #if !UNITY_EDITOR && UNITY_ANDROID
+        //     remoteSpeakerHologram.position = _ml2Layer.PlaneDetection(initialPos);
+        // #else
             remoteSpeakerHologram.position = initialPos;
-        #endif
+        // #endif
 
         HeightScaling();
 
@@ -186,33 +186,33 @@ public class RemoteHologram : MonoBehaviour
         remoteSpeakerHologram.localScale = new Vector3(scale, scale, scale);
     }
 
-    #if !UNITY_EDITOR && UNITY_ANDROID
-    void HandleHologramAttachment()
-    {
-        if (_ml2Layer == null || remoteSpeakerHologram == null) return;
+    // #if !UNITY_EDITOR && UNITY_ANDROID
+    // void HandleHologramAttachment()
+    // {
+    //     if (_ml2Layer == null || remoteSpeakerHologram == null) return;
 
-        if (_ml2Layer.isAttached)
-        {
-            Vector3 rayStart = _ml2Layer.PointerPosition;
-            Vector3 rayDir = _ml2Layer.PointerRotation * Vector3.forward;
+    //     if (_ml2Layer.isAttached)
+    //     {
+    //         Vector3 rayStart = _ml2Layer.PointerPosition;
+    //         Vector3 rayDir = _ml2Layer.PointerRotation * Vector3.forward;
 
-            // keep 1.5m in front of the controller
-            float attachDistance = 1.5f;
-            Vector3 targetPos = rayStart + rayDir * attachDistance;
+    //         // keep 1.5m in front of the controller
+    //         float attachDistance = 1.5f;
+    //         Vector3 targetPos = rayStart + rayDir * attachDistance;
 
-            remoteSpeakerHologram.position = targetPos;
+    //         remoteSpeakerHologram.position = targetPos;
 
-            HeightScaling();
-            _wasAttachedLastFrame = true;
-        }
-        else if (_wasAttachedLastFrame)
-        {
-            Vector3 finalPos = _ml2Layer.PlaneDetection(remoteSpeakerHologram.position);
-            remoteSpeakerHologram.position = finalPos;
+    //         HeightScaling();
+    //         _wasAttachedLastFrame = true;
+    //     }
+    //     else if (_wasAttachedLastFrame)
+    //     {
+    //         Vector3 finalPos = _ml2Layer.PlaneDetection(remoteSpeakerHologram.position);
+    //         remoteSpeakerHologram.position = finalPos;
             
-            HeightScaling();
-            _wasAttachedLastFrame = false;
-        }
-    }
-    #endif
+    //         HeightScaling();
+    //         _wasAttachedLastFrame = false;
+    //     }
+    // }
+    // #endif
 }
