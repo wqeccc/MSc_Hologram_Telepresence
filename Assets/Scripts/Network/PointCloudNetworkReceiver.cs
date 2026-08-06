@@ -71,9 +71,9 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         _remoteSpeakerObj.transform.localRotation = Quaternion.identity;
         _remoteSpeakerObj.transform.localScale = Vector3.one;
 
-        BoxCollider boxCollider = _remoteSpeakerObj.AddComponent<BoxCollider>();
-        boxCollider.center = new Vector3(0, 0, 4.5f);
-        boxCollider.size = new Vector3(5, 5, 5);
+        // BoxCollider boxCollider = _remoteSpeakerObj.AddComponent<BoxCollider>();
+        // boxCollider.center = new Vector3(0, 0, 4.5f);
+        // boxCollider.size = new Vector3(5, 5, 5);
 
         _networkThread = new Thread(networkLoop);
         _networkThread.IsBackground = true;

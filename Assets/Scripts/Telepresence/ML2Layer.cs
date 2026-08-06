@@ -27,7 +27,8 @@ public class ML2Layer : MonoBehaviour
     // controller
     private InputActionAsset inputActionsAsset;
     private InputAction triggerAction, pointerPositionAction, pointerRotationAction;
-    public bool isDragging = false;
+
+    public bool isAttached = false;
 
     IEnumerator Start()
     {
@@ -58,8 +59,7 @@ public class ML2Layer : MonoBehaviour
     {
         if (triggerAction != null)
         {
-            TriggerPressed -= HandleTriggerPressed;
-            TriggerReleased -= HandleTriggerReleased;
+            triggerAction.performed -= HandleTriggerToggle; // unsubscribe
         }
 
         if (inputActionsAsset != null) 
@@ -96,45 +96,35 @@ public class ML2Layer : MonoBehaviour
         pointerPositionAction = inputMap.FindAction("PointerPosition");
         pointerRotationAction = inputMap.FindAction("PointerRotation");
 
-        TriggerPressed += HandleTriggerPressed;
-        TriggerReleased += HandleTriggerReleased;
+        triggerAction.performed += HandleTriggerToggle; // subscribe
     }
-
-    public event Action<InputAction.CallbackContext> TriggerPressed
-    {
-        add => triggerAction.performed += value; // subscribe
-        remove => triggerAction.performed -= value; // unsubscribe
-    }
-
-    public event Action<InputAction.CallbackContext> TriggerReleased
-    {
-        add => triggerAction.canceled += value;
-        remove => triggerAction.canceled -= value;
-    }
-
-    public bool TriggerIsPressed => triggerAction.IsPressed();
 
     public Vector3 PointerPosition => pointerPositionAction.ReadValue<Vector3>();
 
     public Quaternion PointerRotation => pointerRotationAction.ReadValue<Quaternion>();
 
-    void HandleTriggerPressed(InputAction.CallbackContext context)
+    private void HandleTriggerToggle(InputAction.CallbackContext context)
     {
-        Debug.Log("Trigger Pressed");
-        isDragging = true;
-        StartPlanesScanning();
-    }
+        isAttached = !isAttached;
 
-    void HandleTriggerReleased(InputAction.CallbackContext context)
-    {
-        Debug.Log("Trigger Released");
-        isDragging = false;
-        StartCoroutine(StopPlanesScanning());
+        if (isAttached)
+        {
+            Debug.Log("Trigger pressed. Start scanning");
+            if (permissionGranted)
+            {
+                StartPlanesScanning();
+            }
+        }
+        else
+        {
+            Debug.Log("Trigger released. Stop scanning");
+            StartCoroutine(StopPlanesScanning());
+        }
     }
 
     public Vector3 PlaneDetection(Vector3 pos)
     {   
-        if (planeManager != null && !permissionGranted)
+        if (planeManager == null || !permissionGranted || !planeManager.enabled)
         { 
             return pos;
         }
@@ -144,12 +134,13 @@ public class ML2Layer : MonoBehaviour
 
         foreach (var plane in planeManager.trackables)
         {
-            // check if the pos is inside this plane
-            Vector2 pointInPlaneSpace = plane.transform.InverseTransformPoint(pos);
-                
-            if (Mathf.Abs(pointInPlaneSpace.x) <= plane.extents.x && Mathf.Abs(pointInPlaneSpace.y) <= plane.extents.y)
+            Vector3 pointInPlaneSpace = plane.transform.InverseTransformPoint(pos);
+
+            // plane boundary
+            if (Mathf.Abs(pointInPlaneSpace.x) <= plane.extents.x && 
+                Mathf.Abs(pointInPlaneSpace.y) <= plane.extents.y &&
+                Mathf.Abs(pointInPlaneSpace.z) <= 0.3f) 
             {
-                // ref: https://docs.unity3d.com/Packages/com.unity.xr.arfoundation@6.0/api/UnityEngine.XR.ARSubsystems.PlaneClassifications.html
                 switch (plane.classification)
                 {
                     case PlaneClassification.Table:
@@ -171,12 +162,13 @@ public class ML2Layer : MonoBehaviour
             }
         }
 
-        if (!isDragging) StartCoroutine(StopPlanesScanning());
         return new Vector3(pos.x, finalY, pos.z);
     }
 
     void StartPlanesScanning()
     {
+        if (planeManager == null) return;
+
         var newQuery = new MLXrPlaneSubsystem.PlanesQuery
         {
             Flags = planeManager.requestedDetectionMode.ToMLXrQueryFlags() | MLXrPlaneSubsystem.MLPlanesQueryFlags.SemanticAll,
@@ -198,22 +190,25 @@ public class ML2Layer : MonoBehaviour
         {
             planeFeature.InvalidateCurrentPlanes();
         }
-        // Skip a frame for the changes to take effect and prefabs get removed.
         yield return new WaitForEndOfFrame();
-        planeManager.enabled = false;
+        
+        if (planeManager != null)
+        {
+            planeManager.enabled = false;
+        }
         Debug.Log("Stop scanning planes");
     }
 
     void OnPermissionGranted(string permission)
-    {   
-        StartPlanesScanning();
+    {
         permissionGranted = true;
         planeFeature = OpenXRSettings.Instance.GetFeature<MagicLeapPlanesFeature>();
+        Debug.Log("Spatial Mapping Permission Granted");
     }
 
     void OnPermissionDenied(string permission)
     {
-        Debug.LogError($"Failed to create Planes Subsystem due to missing or denied {Permissions.SpatialMapping} permission. Please add to manifest. Disabling script.");
+        Debug.LogError($"Failed to create Planes Subsystem due to missing or denied {permission} permission.");
         enabled = false;
     }
 }

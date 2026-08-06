@@ -20,6 +20,7 @@ public class RemoteHologram : MonoBehaviour
 
     #if !UNITY_EDITOR && UNITY_ANDROID
         private ML2Layer _ml2Layer;
+        private bool _wasAttachedLastFrame = false;
     #endif
 
     public bool enableGazeAlignment = true;
@@ -32,12 +33,6 @@ public class RemoteHologram : MonoBehaviour
     public Pose localHologramAtRemote; // P_a (S_a->b)
 
     private bool initHologramPos = false;
-
-    #if !UNITY_EDITOR && UNITY_ANDROID
-    private bool isDraggingHologram = false;
-    private float dragDistance;
-    private BoxCollider remoteHologramCollider;
-    #endif
 
     void Start()
     {
@@ -76,10 +71,6 @@ public class RemoteHologram : MonoBehaviour
         if (_pcReceiver != null && remoteSpeakerHologram == null)
         {
             remoteSpeakerHologram = _pcReceiver.GetRemoteSpeakerTransform;
-
-            #if !UNITY_EDITOR && UNITY_ANDROID
-                remoteHologramCollider = remoteSpeakerHologram.GetComponent<BoxCollider>();
-            #endif
         }
 
         UpdateLocalUserPosition();
@@ -97,14 +88,7 @@ public class RemoteHologram : MonoBehaviour
             }
 
             #if !UNITY_EDITOR && UNITY_ANDROID
-                if (_ml2Layer.isDragging)
-                {
-                    HandleHologramDragging();
-                }
-                else
-                {
-                    isDraggingHologram = false;
-                }
+                HandleHologramAttachment();
             #endif
         }
 
@@ -195,7 +179,6 @@ public class RemoteHologram : MonoBehaviour
 
     void HeightScaling()
     {
-        // scale = (h_local - h_hologram_placement) / h_remote
         float heightDiff = localSpeaker.position.y - remoteSpeakerHologram.position.y;
         float scale = heightDiff / remoteSpeaker.position.y;
         scale = Mathf.Clamp(scale, 0.1f, 2.0f);
@@ -204,34 +187,31 @@ public class RemoteHologram : MonoBehaviour
     }
 
     #if !UNITY_EDITOR && UNITY_ANDROID
-    void HandleHologramDragging()
+    void HandleHologramAttachment()
     {
-        if (remoteHologramCollider == null)
-        {
-            remoteHologramCollider = remoteSpeakerHologram.GetComponent<BoxCollider>();
-        }
+        if (_ml2Layer == null || remoteSpeakerHologram == null) return;
 
-        if (!isDraggingHologram)
+        if (_ml2Layer.isAttached)
         {
             Vector3 rayStart = _ml2Layer.PointerPosition;
             Vector3 rayDir = _ml2Layer.PointerRotation * Vector3.forward;
-            Ray ray = new Ray(rayStart, rayDir);
 
-            // hit hologram
-            if (remoteHologramCollider.Raycast(ray, out RaycastHit hit, 10f))
-            {
-                isDraggingHologram = true;
-                dragDistance = Vector3.Distance(rayStart, remoteSpeakerHologram.position);
-            }
-        }
-        else
-        {
-            Vector3 rayStart = _ml2Layer.PointerPosition;
-            Vector3 rayDir = _ml2Layer.PointerRotation * Vector3.forward;
-            Vector3 targetPos = rayStart + rayDir * dragDistance;
+            // keep 1.5m in front of the controller
+            float attachDistance = 1.5f;
+            Vector3 targetPos = rayStart + rayDir * attachDistance;
 
-            remoteSpeakerHologram.position = _ml2Layer.PlaneDetection(targetPos);
+            remoteSpeakerHologram.position = targetPos;
+
             HeightScaling();
+            _wasAttachedLastFrame = true;
+        }
+        else if (_wasAttachedLastFrame)
+        {
+            Vector3 finalPos = _ml2Layer.PlaneDetection(remoteSpeakerHologram.position);
+            remoteSpeakerHologram.position = finalPos;
+            
+            HeightScaling();
+            _wasAttachedLastFrame = false;
         }
     }
     #endif
