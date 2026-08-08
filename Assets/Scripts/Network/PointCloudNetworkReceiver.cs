@@ -67,7 +67,7 @@ public class PointCloudNetworkReceiver : MonoBehaviour
 
         _remoteSpeakerObj = new GameObject("RemoteSpeaker");
         _remoteSpeakerObj.transform.parent = this.transform;
-        _remoteSpeakerObj.transform.localPosition = Vector3.zero;
+        _remoteSpeakerObj.transform.localPosition = new Vector3(0f, 0.2f, 1.5f);
         _remoteSpeakerObj.transform.localRotation = Quaternion.identity;
         _remoteSpeakerObj.transform.localScale = Vector3.one;
 

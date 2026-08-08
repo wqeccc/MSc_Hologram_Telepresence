@@ -53,7 +53,7 @@ public class GazeAlignment : MonoBehaviour
             Quaternion finalRot = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
 
             // lerp smoothing
-            P_b.rotation = Quaternion.Slerp(P_b.rotation, finalRot, t);
+            P_b.localRotation = Quaternion.Slerp(P_b.localRotation, finalRot, t);
         }
         
         // calculate vertical height differences
