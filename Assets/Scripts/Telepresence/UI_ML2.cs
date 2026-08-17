@@ -64,6 +64,17 @@ public class UI_ML2 : MonoBehaviour
         if (statusText == null) return;
 
         string runtime = $"Runtime: {Time.time:F1}s";
+        string height = "\n";
+
+        if (_remoteHologram != null && _remoteHologram.remoteSpeakerHologram != null)
+        {
+            string sa = $"local speaker height: {_remoteHologram.localSpeaker.position.y}";
+            string sb = $"remote speaker height: {_remoteHologram.remoteSpeaker.position.y}";
+            string pb = $"remote speaker hologram height: {_remoteHologram.remoteSpeakerHologram.position.y}";
+            string pa = $"local speaker at remote height: {_remoteHologram.localHologramAtRemote.position.y}";
+
+            height += $"{sa}\n" + $"{sb}\n" + $"{pb}\n" + $"{pa}\n";
+        }
 
         if (_gazeAlignment != null && _remoteHologram != null && _remoteHologram.enableGazeAlignment)
         {
@@ -71,13 +82,15 @@ public class UI_ML2 : MonoBehaviour
                 $"{runtime}\n" +
                 $"Gaze Alignment: <color=green>ON</color>\n" +
                 $"Scenario: {_gazeAlignment.currentScenario}\n" +
-                $"Scale: {_gazeAlignment.calculatedFinalScale:F2}";
+                $"Scale: {_gazeAlignment.calculatedFinalScale:F2}\n" +
+                $"{height}";
         }
         else
         {
             statusText.text =
                 $"{runtime}\n" +
-                "Gaze Alignment: <color=red>OFF</color>";
+                "Gaze Alignment: <color=red>OFF</color>\n" +
+                $"{height}";
         }
     }
 
