@@ -4,9 +4,9 @@ using UnityEngine.InputSystem;
 using UnityEngine.XR.Interaction.Toolkit.Inputs;
 using TMPro;
 
-public class New_ML2Layer : MonoBehaviour // TODO add unity tmPro
+public class UI_ML2 : MonoBehaviour
 {
-    public TextMeshPro statusText;
+    public TextMeshProUGUI statusText;
     private RemoteHologram _remoteHologram;
     private GazeAlignment _gazeAlignment;
 
@@ -20,7 +20,6 @@ public class New_ML2Layer : MonoBehaviour // TODO add unity tmPro
         _gazeAlignment = FindFirstObjectByType<GazeAlignment>();
 
         InitController();
-        UpdateUI();
     }
 
     void InitController()
@@ -46,36 +45,39 @@ public class New_ML2Layer : MonoBehaviour // TODO add unity tmPro
 
     void HandleTriggerToggle(InputAction.CallbackContext context)
     {
+        Debug.Log("Trigger Toggle");
         if (_remoteHologram != null)
         {
             _remoteHologram.enableGazeAlignment = !_remoteHologram.enableGazeAlignment;
-            
-            UpdateUI();
+
             Debug.Log($"[ML2Layer] Trigger Pressed. Gaze Alignment enabled: {_remoteHologram.enableGazeAlignment}");
         }
     }
 
-    private void Update()
+    void Update()
     {
-        if (_gazeAlignment != null && _remoteHologram != null && _remoteHologram.enableGazeAlignment)
-        {
-            UpdateUI();
-        }
+        UpdateUI();
     }
 
     void UpdateUI()
     {
-        if (statusText == null || _remoteHologram == null) return;
+        if (statusText == null) return;
 
-        if (_remoteHologram.enableGazeAlignment)
+        string runtime = $"Runtime: {Time.time:F1}s";
+
+        if (_gazeAlignment != null && _remoteHologram != null && _remoteHologram.enableGazeAlignment)
         {
-            statusText.text = $"Gaze Alignment: <color=green>ON</color>\n" +
-                              $"Scenario: {_gazeAlignment.currentScenario}\n" +
-                              $"Scale: {_gazeAlignment.calculatedFinalScale:F2}";
+            statusText.text =
+                $"{runtime}\n" +
+                $"Gaze Alignment: <color=green>ON</color>\n" +
+                $"Scenario: {_gazeAlignment.currentScenario}\n" +
+                $"Scale: {_gazeAlignment.calculatedFinalScale:F2}";
         }
         else
         {
-            statusText.text = "Gaze Alignment: <color=red>OFF</color>";
+            statusText.text =
+                $"{runtime}\n" +
+                "Gaze Alignment: <color=red>OFF</color>";
         }
     }
 
