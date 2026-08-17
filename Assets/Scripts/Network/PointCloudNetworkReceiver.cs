@@ -48,11 +48,19 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     public bool hideNonSkeletonPixels = true;
     public int listeningPort = 50051;
 
+    private Profiler _profiler;
+    private float _lastFrameReceiveTime = 0f;
+    private float _calculatedLatencyMs = 0f;
+    private float _calculatedBandwidthMbps = 0f;
+    private int _activeVerticesCount = 0;
+
     private GameObject _remoteSpeakerObj;
     public Transform GetRemoteSpeakerTransform => _remoteSpeakerObj != null ? _remoteSpeakerObj.transform : null;
 
     void Start()
     {
+        _profiler = FindFirstObjectByType<Profiler>();
+
         _texturesInitialized = false;
         _cloudGameObjs = new List<GameObject>();
         _networkInitialized = false;
@@ -183,6 +191,11 @@ public class PointCloudNetworkReceiver : MonoBehaviour
             _bodyIndexFramesEmpty.Push(new byte[_bodyIndexByteSize]);
         }
 
+        if (_profiler != null && _profiler.isLogging)
+        {
+            _activeVerticesCount = _depthWidth * _depthHeight; // default   
+        }
+
         _configReceived = true;
         _networkInitialized = true;
     }
@@ -208,6 +221,24 @@ public class PointCloudNetworkReceiver : MonoBehaviour
 
     private void DistributeFrameData(byte[] fullFrameData)
     {
+        if (_profiler != null && _profiler.isLogging) {
+            float currentTime = Time.realtimeSinceStartup;
+            if (_lastFrameReceiveTime > 0f)
+            {
+                float frameInterval = currentTime - _lastFrameReceiveTime;
+                
+                // latency
+                _calculatedLatencyMs = frameInterval * 1000f;
+
+                // bandwidth(Mbps): (Bytes * 8 bits) / frameInterval / 1,000,000
+                if (frameInterval > 0f)
+                {
+                    _calculatedBandwidthMbps = (fullFrameData.Length * 8f) / frameInterval / 1000000f;
+                }
+            }
+            _lastFrameReceiveTime = currentTime;
+        }
+
         int expectedPointCloudSize = _colorByteSize + _depthByteSize + _bodyIndexByteSize;
         if (fullFrameData.Length < expectedPointCloudSize) return;
 
@@ -405,6 +436,8 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         if (!_networkInitialized) return;
         if (_networkInitialized && !_texturesInitialized) PostKinectInit();
 
+        byte[] pbuffer = null;
+
         lock (_framesLock)
         {
             refillEmptyStack();
@@ -412,10 +445,12 @@ public class PointCloudNetworkReceiver : MonoBehaviour
             {
                 byte[] buffer = _colorFrames.Dequeue();
                 byte[] dbuffer = _depthFrames.Dequeue();
-                byte[] pbuffer = _bodyIndexFrames.Dequeue();
+                pbuffer = _bodyIndexFrames.Dequeue();
+
                 _colorTexture.LoadRawTextureData(buffer);
                 _depthTexture.LoadRawTextureData(dbuffer);
                 _bodyIndexTexture.LoadRawTextureData(pbuffer);
+
                 _colorFramesEmpty.Push(buffer);
                 _depthFramesEmpty.Push(dbuffer);
                 _bodyIndexFramesEmpty.Push(pbuffer);
@@ -425,6 +460,27 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         _colorTexture.Apply();
         _depthTexture.Apply();
         _bodyIndexTexture.Apply();
+
+        // compute _activeVerticesCount
+        if (_profiler != null && _profiler.isLogging && pbuffer != null)
+        {
+            if (hideNonSkeletonPixels)
+            {
+                int activeCount = 0;
+                for (int i = 0; i < pbuffer.Length; i++)
+                {
+                    if (pbuffer[i] != 255)
+                    {
+                        activeCount++;
+                    }
+                }
+                _activeVerticesCount = activeCount;
+            }
+            else
+            {
+                _activeVerticesCount = _depthWidth * _depthHeight;
+            }
+        }
         
         if (_remoteSpeakerObj != null)
         {
@@ -437,6 +493,13 @@ public class PointCloudNetworkReceiver : MonoBehaviour
                 mr.material.SetTexture("_DepthTex", _depthTexture);
                 mr.material.SetTexture("_BodyIndexTex", _bodyIndexTexture);
             }
+        }
+
+        // update profiler
+        if (_profiler != null && _profiler.isLogging)
+        {
+            float packetSizeBytes = _colorByteSize + _depthByteSize + _bodyIndexByteSize;
+            _profiler.UpdateStreamingMetrics(_activeVerticesCount, _calculatedLatencyMs, _calculatedBandwidthMbps, packetSizeBytes);
         }
     }
 

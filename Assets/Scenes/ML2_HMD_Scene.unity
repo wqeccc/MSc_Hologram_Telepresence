@@ -133,6 +133,7 @@ GameObject:
   - component: {fileID: 441841608}
   - component: {fileID: 441841609}
   - component: {fileID: 441841610}
+  - component: {fileID: 441841611}
   m_Layer: 0
   m_Name: Remote Anchor
   m_TagString: Untagged
@@ -191,6 +192,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   statusText: {fileID: 540651494}
+--- !u!114 &441841611
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 441841606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3e22a30ac8d14e13a129a2882f85679, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isLogging: 0
+  logInterval: 0.5
+  customFileName: MSc_Evaluation_Log
 --- !u!1 &540651492
 GameObject:
   m_ObjectHideFlags: 0
