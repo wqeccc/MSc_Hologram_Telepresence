@@ -21,8 +21,8 @@ public class GazeAlignment : MonoBehaviour
     public float calculatedFinalScale = 1.0f;
 
     [Header("Floor Offsets")]
-    public float localFloorOffset = 0f;
-    public float remoteFloorOffset = 0f;
+    public float localFloorOffset = 1.4f;
+    public float remoteFloorOffset = 0.75f;
 
     /**
     * assume a is local hologram space, b is remote hologram space
@@ -74,7 +74,7 @@ public class GazeAlignment : MonoBehaviour
         {
             // guarantee face-to-face conditions (Eb should align with -Eh)
             // the rotation difference between Eb and the inverse of Eh.
-            Quaternion targetRotation = Quaternion.FromToRotation(Eb_xz.normalized, -Eh_xz.normalized);
+            Quaternion targetRotation = Quaternion.FromToRotation(Eb_xz.normalized, Eh_xz.normalized);
             // apply the rotation difference to the hologram (y axis)
             Quaternion finalRot = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
 

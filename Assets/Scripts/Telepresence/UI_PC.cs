@@ -28,12 +28,12 @@ public class UI_PC : MonoBehaviour
         // string clock = $"Time: {DateTime.Now:HH:mm:ss}";
         string height = "\n";
 
-        if (_remoteHologram != null && _remoteHologram.remoteSpeakerHologram != null)
+        if (_gazeAlignment != null && _remoteHologram != null && _remoteHologram.remoteSpeakerHologram != null)
         {
-            string sa = $"local speaker height: {_remoteHologram.localSpeaker.position.y}";
-            string sb = $"remote speaker height: {_remoteHologram.remoteSpeaker.position.y}";
-            string pb = $"remote speaker hologram height: {_remoteHologram.remoteSpeakerHologram.position.y}";
-            string pa = $"local speaker at remote height: {_remoteHologram.localHologramAtRemote.position.y}";
+            string sa = $"local speaker height: {_remoteHologram.localSpeaker.position.y + _gazeAlignment.localFloorOffset}";
+            string sb = $"remote speaker height: {_remoteHologram.remoteSpeaker.position.y + _gazeAlignment.remoteFloorOffset}";
+            string pb = $"remote speaker hologram height: {_remoteHologram.remoteSpeakerHologram.position.y + _gazeAlignment.remoteFloorOffset}";
+            string pa = $"local speaker at remote height: {_remoteHologram.localHologramAtRemote.position.y + _gazeAlignment.localFloorOffset}";
 
             height += $"{sa}\n" + $"{sb}\n" + $"{pb}\n" + $"{pa}\n";
         }

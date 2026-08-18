@@ -724,9 +724,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3e22a30ac8d14e13a129a2882f85679, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isLogging: 0
-  logInterval: 0.5
-  customFileName: MSc_Evaluation_Log
+  isLogging: 1
+  systemLogInterval: 0.5
+  customFileNamePrefix: MSc_Evaluation
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
