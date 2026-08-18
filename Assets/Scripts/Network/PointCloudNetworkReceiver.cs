@@ -4,10 +4,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics; // for timer
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
+
+using Debug = UnityEngine.Debug;
 
 public class PointCloudNetworkReceiver : MonoBehaviour
 {
@@ -49,10 +52,12 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     public int listeningPort = 50051;
 
     private Profiler _profiler;
-    private float _lastFrameReceiveTime = 0f;
+    private Stopwatch _networkStopwatch;
+    private long _lastFrameTicks = 0;
     private float _calculatedLatencyMs = 0f;
     private float _calculatedBandwidthMbps = 0f;
     private int _activeVerticesCount = 0;
+    private object _metricsLock = new object();
 
     private GameObject _remoteSpeakerObj;
     public Transform GetRemoteSpeakerTransform => _remoteSpeakerObj != null ? _remoteSpeakerObj.transform : null;
@@ -60,6 +65,9 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     void Start()
     {
         _profiler = FindFirstObjectByType<Profiler>();
+
+        _networkStopwatch = new Stopwatch();
+        _networkStopwatch.Start();
 
         _texturesInitialized = false;
         _cloudGameObjs = new List<GameObject>();
@@ -222,21 +230,24 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     private void DistributeFrameData(byte[] fullFrameData)
     {
         if (_profiler != null && _profiler.isLogging) {
-            float currentTime = Time.realtimeSinceStartup;
-            if (_lastFrameReceiveTime > 0f)
+            long currentTicks = _networkStopwatch.ElapsedTicks;
+            if (_lastFrameTicks > 0)
             {
-                float frameInterval = currentTime - _lastFrameReceiveTime;
+                double elapsedSeconds = (double)(currentTicks - _lastFrameTicks) / Stopwatch.Frequency;
                 
-                // latency
-                _calculatedLatencyMs = frameInterval * 1000f;
-
-                // bandwidth(Mbps): (Bytes * 8 bits) / frameInterval / 1,000,000
-                if (frameInterval > 0f)
+                if (elapsedSeconds > 0)
                 {
-                    _calculatedBandwidthMbps = (fullFrameData.Length * 8f) / frameInterval / 1000000f;
+                    float latencyMs = (float)(elapsedSeconds * 1000.0);
+                    float bandwidthMbps = (float)((fullFrameData.Length * 8.0) / elapsedSeconds / 1000000.0);
+
+                    lock (_metricsLock)
+                    {
+                        _calculatedLatencyMs = latencyMs;
+                        _calculatedBandwidthMbps = bandwidthMbps;
+                    }
                 }
             }
-            _lastFrameReceiveTime = currentTime;
+            _lastFrameTicks = currentTicks;
         }
 
         int expectedPointCloudSize = _colorByteSize + _depthByteSize + _bodyIndexByteSize;
@@ -498,8 +509,17 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         // update profiler
         if (_profiler != null && _profiler.isLogging)
         {
+            float curLatency;
+            float curBandwidth;
+
+            lock (_metricsLock)
+            {
+                curLatency = _calculatedLatencyMs;
+                curBandwidth = _calculatedBandwidthMbps;
+            }
+
             float packetSizeBytes = _colorByteSize + _depthByteSize + _bodyIndexByteSize;
-            _profiler.UpdateStreamingMetrics(_activeVerticesCount, _calculatedLatencyMs, _calculatedBandwidthMbps, packetSizeBytes);
+            _profiler.UpdateStreamingMetrics(_activeVerticesCount, curLatency, curBandwidth, packetSizeBytes);
         }
     }
 
