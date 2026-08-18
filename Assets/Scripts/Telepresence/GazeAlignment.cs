@@ -20,6 +20,10 @@ public class GazeAlignment : MonoBehaviour
     public ScalingCase currentScenario;
     public float calculatedFinalScale = 1.0f;
 
+    [Header("Floor Offsets")]
+    public float localFloorOffset = 0f;
+    public float remoteFloorOffset = 0f;
+
     /**
     * assume a is local hologram space, b is remote hologram space
     * S_a: local speaker
@@ -34,8 +38,30 @@ public class GazeAlignment : MonoBehaviour
 
         // Eb = Sr - Pr (gaze direction of remote speaker Sr looking at Pr)
         // Eh = Pl - Sl (desired gaze direction of local hologram Pl looking at Sl)
-        Vector3 Eb = S_b.position - P_a.position;
-        Vector3 Eh = P_b.position - S_a.position;
+        // Vector3 Eb = S_b.position - P_a.position;
+        // Vector3 Eh = P_b.position - S_a.position;
+
+        Vector3 saPos = S_a.position;
+        Vector3 sbPos = S_b.position;
+        Vector3 pbPos = P_b.position;
+        Vector3 paPos = P_a.position;
+
+        float floorSaY = saPos.y + localFloorOffset;
+        float floorSbY = sbPos.y + remoteFloorOffset;
+        float floorPbY = pbPos.y + remoteFloorOffset;
+        float floorPaY = paPos.y + localFloorOffset;
+
+        // Viewing Vectors
+        Vector3 Eb = new Vector3(
+            sbPos.x - paPos.x,
+            floorSbY - floorPaY,
+            sbPos.z - paPos.z
+        );
+        Vector3 Eh = new Vector3(
+            pbPos.x - saPos.x,
+            floorPbY - floorSaY,
+            pbPos.z - saPos.z
+        );
 
         // only manipulating in XZ plane
         Vector3 Eb_xz = new Vector3(Eb.x, 0f, Eb.z);
@@ -53,7 +79,7 @@ public class GazeAlignment : MonoBehaviour
             Quaternion finalRot = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
 
             // lerp smoothing
-            P_b.rotation = Quaternion.Slerp(P_b.rotation, finalRot, t);
+            P_b.localRotation = Quaternion.Slerp(P_b.localRotation, finalRot, t);
         }
         
         // calculate vertical height differences

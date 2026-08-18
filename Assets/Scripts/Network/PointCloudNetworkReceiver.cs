@@ -4,10 +4,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics; // for timer
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
+
+using Debug = UnityEngine.Debug;
 
 public class PointCloudNetworkReceiver : MonoBehaviour
 {
@@ -48,11 +51,24 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     public bool hideNonSkeletonPixels = true;
     public int listeningPort = 50051;
 
+    private Profiler _profiler;
+    private Stopwatch _networkStopwatch;
+    private long _lastFrameTicks = 0;
+    private float _calculatedLatencyMs = 0f;
+    private float _calculatedBandwidthMbps = 0f;
+    private int _activeVerticesCount = 0;
+    private object _metricsLock = new object();
+
     private GameObject _remoteSpeakerObj;
     public Transform GetRemoteSpeakerTransform => _remoteSpeakerObj != null ? _remoteSpeakerObj.transform : null;
 
     void Start()
     {
+        _profiler = FindFirstObjectByType<Profiler>();
+
+        _networkStopwatch = new Stopwatch();
+        _networkStopwatch.Start();
+
         _texturesInitialized = false;
         _cloudGameObjs = new List<GameObject>();
         _networkInitialized = false;
@@ -67,7 +83,7 @@ public class PointCloudNetworkReceiver : MonoBehaviour
 
         _remoteSpeakerObj = new GameObject("RemoteSpeaker");
         _remoteSpeakerObj.transform.parent = this.transform;
-        _remoteSpeakerObj.transform.localPosition = Vector3.zero;
+        _remoteSpeakerObj.transform.localPosition = new Vector3(0f, 0.2f, 1.5f);
         _remoteSpeakerObj.transform.localRotation = Quaternion.identity;
         _remoteSpeakerObj.transform.localScale = Vector3.one;
 
@@ -183,6 +199,11 @@ public class PointCloudNetworkReceiver : MonoBehaviour
             _bodyIndexFramesEmpty.Push(new byte[_bodyIndexByteSize]);
         }
 
+        if (_profiler != null && _profiler.isLogging)
+        {
+            _activeVerticesCount = _depthWidth * _depthHeight; // default   
+        }
+
         _configReceived = true;
         _networkInitialized = true;
     }
@@ -208,6 +229,27 @@ public class PointCloudNetworkReceiver : MonoBehaviour
 
     private void DistributeFrameData(byte[] fullFrameData)
     {
+        if (_profiler != null && _profiler.isLogging) {
+            long currentTicks = _networkStopwatch.ElapsedTicks;
+            if (_lastFrameTicks > 0)
+            {
+                double elapsedSeconds = (double)(currentTicks - _lastFrameTicks) / Stopwatch.Frequency;
+                
+                if (elapsedSeconds > 0)
+                {
+                    float latencyMs = (float)(elapsedSeconds * 1000.0);
+                    float bandwidthMbps = (float)((fullFrameData.Length * 8.0) / elapsedSeconds / 1000000.0);
+
+                    lock (_metricsLock)
+                    {
+                        _calculatedLatencyMs = latencyMs;
+                        _calculatedBandwidthMbps = bandwidthMbps;
+                    }
+                }
+            }
+            _lastFrameTicks = currentTicks;
+        }
+
         int expectedPointCloudSize = _colorByteSize + _depthByteSize + _bodyIndexByteSize;
         if (fullFrameData.Length < expectedPointCloudSize) return;
 
@@ -405,6 +447,8 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         if (!_networkInitialized) return;
         if (_networkInitialized && !_texturesInitialized) PostKinectInit();
 
+        byte[] pbuffer = null;
+
         lock (_framesLock)
         {
             refillEmptyStack();
@@ -412,10 +456,12 @@ public class PointCloudNetworkReceiver : MonoBehaviour
             {
                 byte[] buffer = _colorFrames.Dequeue();
                 byte[] dbuffer = _depthFrames.Dequeue();
-                byte[] pbuffer = _bodyIndexFrames.Dequeue();
+                pbuffer = _bodyIndexFrames.Dequeue();
+
                 _colorTexture.LoadRawTextureData(buffer);
                 _depthTexture.LoadRawTextureData(dbuffer);
                 _bodyIndexTexture.LoadRawTextureData(pbuffer);
+
                 _colorFramesEmpty.Push(buffer);
                 _depthFramesEmpty.Push(dbuffer);
                 _bodyIndexFramesEmpty.Push(pbuffer);
@@ -425,6 +471,27 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         _colorTexture.Apply();
         _depthTexture.Apply();
         _bodyIndexTexture.Apply();
+
+        // compute _activeVerticesCount
+        if (_profiler != null && _profiler.isLogging && pbuffer != null)
+        {
+            if (hideNonSkeletonPixels)
+            {
+                int activeCount = 0;
+                for (int i = 0; i < pbuffer.Length; i++)
+                {
+                    if (pbuffer[i] != 255)
+                    {
+                        activeCount++;
+                    }
+                }
+                _activeVerticesCount = activeCount;
+            }
+            else
+            {
+                _activeVerticesCount = _depthWidth * _depthHeight;
+            }
+        }
         
         if (_remoteSpeakerObj != null)
         {
@@ -437,6 +504,22 @@ public class PointCloudNetworkReceiver : MonoBehaviour
                 mr.material.SetTexture("_DepthTex", _depthTexture);
                 mr.material.SetTexture("_BodyIndexTex", _bodyIndexTexture);
             }
+        }
+
+        // update profiler
+        if (_profiler != null && _profiler.isLogging)
+        {
+            float curLatency;
+            float curBandwidth;
+
+            lock (_metricsLock)
+            {
+                curLatency = _calculatedLatencyMs;
+                curBandwidth = _calculatedBandwidthMbps;
+            }
+
+            float packetSizeBytes = _colorByteSize + _depthByteSize + _bodyIndexByteSize;
+            _profiler.UpdateStreamingMetrics(_activeVerticesCount, curLatency, curBandwidth, packetSizeBytes);
         }
     }
 
