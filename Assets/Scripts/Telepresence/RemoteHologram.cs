@@ -48,6 +48,8 @@ public class RemoteHologram : MonoBehaviour
         _mdReceiver = gameObject.AddComponent<MetaDataNetworkReceiver>();
         _mdSender = gameObject.AddComponent<MetaDataNetworkSender>();
         _gazeAlignment = gameObject.AddComponent<GazeAlignment>();
+
+         Debug.Log("unity new v7");
     }
 
     void Update()
