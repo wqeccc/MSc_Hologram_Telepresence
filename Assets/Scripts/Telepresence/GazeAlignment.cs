@@ -21,8 +21,8 @@ public class GazeAlignment : MonoBehaviour
     public float calculatedFinalScale = 1.0f;
 
     [Header("Floor Offsets")]
-    public float localFloorOffset = 0f;
-    public float remoteFloorOffset = 0f;
+    public float localFloorOffset = 0.75f; // ml2 0.75m, kinect1 = 1.4m, kinect2 1.4m
+    public float remoteFloorOffset = 1.4f;
 
     /**
     * assume a is local hologram space, b is remote hologram space
