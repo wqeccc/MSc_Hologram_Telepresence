@@ -27,7 +27,7 @@ public class PointCloudNetworkSender : MonoBehaviour
 
     private int frameCounter = 0;
     private bool kinectConfigACK = false;
-    private const int MAX_UDP_PACKET_SIZE = 60000; 
+    private const int MAX_UDP_PACKET_SIZE = 60000; // maximum length of a single packet (less than 64 KB)
 
     void Start()
     {
