@@ -41,7 +41,7 @@ public class MetaDataNetworkSender : MonoBehaviour
     }
 
     [Header("Network Settings")]
-    public string targetIP = "129.11.145.107"; //  ml2 ip address:10.41.60.12, ml2 pc: 129.11.145.130, pc: 129.11.145.107
+    public string targetIP = "192.168.137.250"; //  ml2 ip address:192.168.137.250, ml2 pc: 129.11.145.130, pc: 129.11.145.107
     public int targetPort = 50052; // 50051-pointcloud 50052-metadata
 
     private UdpClient _udpClient;
@@ -63,7 +63,7 @@ public class MetaDataNetworkSender : MonoBehaviour
         {
             _udpClient = new UdpClient();
             _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, targetPort));
+            _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
 
             // 14 float * 4 byte = 56 byte
             byte[] metaPacket = new byte[56];

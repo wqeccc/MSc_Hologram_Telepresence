@@ -345,6 +345,9 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     private void initializePointCloudData()
     {
         _renderMaterial = Resources.Load("Materials/hologramMat") as Material;
+        if (_renderMaterial == null) {
+            Debug.LogError("shader material loading error");
+        }
         
         List<Vector3> points = new List<Vector3>();
         List<Vector2> uv0s = new List<Vector2>(); // Kinect uv
