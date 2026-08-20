@@ -176,7 +176,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 839b445bcefe86e4c850a6223d8e213f, type: 3}
   m_Name: MagicLeapMarkerUnderstandingFeature Android
   m_EditorClassIdentifier: 
-  m_enabled: 1
+  m_enabled: 0
   nameUi: Magic Leap 2 Marker Understanding
   version: 1.0.0
   featureIdInternal: com.magicleap.openxr.feature.ml2_markerunderstanding
@@ -1042,7 +1042,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b263bfa84f8e34d46bc7293680ad3d82, type: 3}
   m_Name: MagicLeapSpatialAnchorsFeature Android
   m_EditorClassIdentifier: 
-  m_enabled: 1
+  m_enabled: 0
   nameUi: Magic Leap 2 Spatial Anchor Subsystem
   version: 1.0.0
   featureIdInternal: com.magicleap.openxr.feature.ml2_spatialanchor
@@ -1223,7 +1223,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f7fbc139c144e69b4a0b0fb5139683f, type: 3}
   m_Name: MagicLeapPlanesFeature Android
   m_EditorClassIdentifier: 
-  m_enabled: 1
+  m_enabled: 0
   nameUi: Magic Leap 2 Planes Subsystem
   version: 1.0.0
   featureIdInternal: com.magicleap.openxr.feature.ml2_planes
@@ -1540,7 +1540,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be4414b393e32144b91a70d63254a4b2, type: 3}
   m_Name: MagicLeapSpatialAnchorsStorageFeature Android
   m_EditorClassIdentifier: 
-  m_enabled: 1
+  m_enabled: 0
   nameUi: Magic Leap 2 Spatial Anchors Storage
   version: 1.0.0
   featureIdInternal: com.magicleap.openxr.feature.ml2_spatialanchorstorage

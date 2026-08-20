@@ -148,7 +148,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa9a5b85a7b5b4d08961cd1e4278fdbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  renderLocalUser: 1
+  renderLocalUser: 0
   sendData: 1
 --- !u!4 &45444972
 Transform:
