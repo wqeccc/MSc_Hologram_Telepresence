@@ -11,7 +11,7 @@ public class Profiler : MonoBehaviour
     public float systemLogInterval = 0.5f; // record data every 0.5 seconds
     public string customFileNamePrefix = "MSc_Evaluation";
 
-    // [Header("Current Runtime Metrics")]
+    // Current Runtime Metrics
     private int currentPointCloudVertices = 0;
     private float currentNetworkLatencyMs = 0f;
     private float currentBandwidthMbps = 0f;
@@ -21,8 +21,14 @@ public class Profiler : MonoBehaviour
     private int frameCountAccumulator = 0;
     private float systemTimer = 0.0f;
 
+    // GPU / CPU Frame Timing
+    private FrameTiming[] _frameTimings = new FrameTiming[1];
+    private float cpuTimeAccumulator = 0.0f;
+    private float gpuTimeAccumulator = 0.0f;
+
     private string systemFilePath;
     private string networkFilePath;
+    private string gazeFilePath;
 
     private ConcurrentQueue<(string filePath, string line)> logQueue = new ConcurrentQueue<(string, string)>();
     private bool isWritingLoopRunning = false;
@@ -38,12 +44,15 @@ public class Profiler : MonoBehaviour
 
         systemFilePath = Path.Combine(folderPath, $"{customFileNamePrefix}_System_{timestamp}.csv");
         networkFilePath = Path.Combine(folderPath, $"{customFileNamePrefix}_Network_{timestamp}.csv");
+        gazeFilePath = Path.Combine(folderPath, $"{customFileNamePrefix}_GazeAlignment_{timestamp}.csv");
 
         // headers
-        string systemHeader = "Timestamp_s,FPS,FrameTime_ms,ActiveVerticesCount\n";
+        string systemHeader = "Timestamp_s,FPS,FrameTime_ms,CPU_Time_ms,GPU_Time_ms,ActiveVerticesCount\n";
         string networkHeader = "Timestamp_s,Latency_ms,Bandwidth_Mbps,PacketSize_KB,ActiveVerticesCount\n";
+        string gazeHeader = "Timestamp_s,CurrentCase,FinalScale,LocalDeltaY,RemoteDeltaY\n";
         File.WriteAllText(systemFilePath, systemHeader);
         File.WriteAllText(networkFilePath, networkHeader);
+        File.WriteAllText(gazeFilePath, gazeHeader);
 
         Debug.Log($"[Profiler] System Log created at: {systemFilePath}");
         Debug.Log($"[Profiler] Network Log created at: {networkFilePath}");
@@ -56,7 +65,17 @@ public class Profiler : MonoBehaviour
     {
         if (!isLogging) return;
 
-        // compute Frame Time and FPS
+        // CPU / GPU times
+        FrameTimingManager.CaptureFrameTimings();
+        uint numTimings = FrameTimingManager.GetLatestTimings(1, _frameTimings);
+
+        if (numTimings > 0)
+        {
+            cpuTimeAccumulator += (float)_frameTimings[0].cpuFrameTime * 1000f;
+            gpuTimeAccumulator += (float)_frameTimings[0].gpuFrameTime * 1000f;
+        }
+
+        // Frame Time & FPS
         deltaTimeAccumulator += Time.unscaledDeltaTime;
         frameCountAccumulator++;
         systemTimer += Time.unscaledDeltaTime;
@@ -66,19 +85,27 @@ public class Profiler : MonoBehaviour
         {
             float averageFPS = frameCountAccumulator / deltaTimeAccumulator;
             float averageFrameTimeMs = (deltaTimeAccumulator / frameCountAccumulator) * 1000f;
+            
+            float averageCpuMs = frameCountAccumulator > 0 ? (cpuTimeAccumulator / frameCountAccumulator) : 0f;
+            float averageGpuMs = frameCountAccumulator > 0 ? (gpuTimeAccumulator / frameCountAccumulator) : 0f;
+
             float currentTime = Time.timeSinceLevelLoad;
 
             string systemLogLine = $"{currentTime:F3}," +
                                   $"{averageFPS:F2}," +
                                   $"{averageFrameTimeMs:F2}," +
+                                  $"{averageCpuMs:F2}," +
+                                  $"{averageGpuMs:F2}," +
                                   $"{currentPointCloudVertices}";
 
             logQueue.Enqueue((systemFilePath, systemLogLine));
 
-            // reset
+            // reset accumulators
             systemTimer = 0.0f;
             deltaTimeAccumulator = 0.0f;
             frameCountAccumulator = 0;
+            cpuTimeAccumulator = 0.0f;
+            gpuTimeAccumulator = 0.0f;
         }
     }
 
@@ -104,7 +131,20 @@ public class Profiler : MonoBehaviour
         logQueue.Enqueue((networkFilePath, networkLogLine));
     }
 
-    // write data
+    // gaze algorithm validation
+    public void RecordGazeMetrics(int scenarioCase, float finalScale, float localDeltaY, float remoteDeltaY)
+    {
+        float currentTime = Time.timeSinceLevelLoad;
+        string gazeLogLine = $"{currentTime:F3}," +
+                            $"{scenarioCase}," +
+                            $"{finalScale:F3}," +
+                            $"{localDeltaY:F3}," +
+                            $"{remoteDeltaY:F3}";
+
+        logQueue.Enqueue((gazeFilePath, gazeLogLine));
+    }
+
+    // write data loop
     private async Task ProcessLogQueueAsync()
     {
         while (isWritingLoopRunning || !logQueue.IsEmpty)
@@ -147,8 +187,4 @@ public class Profiler : MonoBehaviour
     {
         isWritingLoopRunning = false;
     }
-
-    // TODO
-    // unity profiler gpu & cpu frametime
-    // gaze alignment case data (recording)
 }

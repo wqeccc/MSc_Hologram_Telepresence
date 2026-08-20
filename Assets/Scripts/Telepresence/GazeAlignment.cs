@@ -24,6 +24,13 @@ public class GazeAlignment : MonoBehaviour
     public float localFloorOffset = 0.75f; // ml2 0.75m, kinect1 = 1.4m, kinect2 1.4m
     public float remoteFloorOffset = 1.4f;
 
+    private Profiler _profiler;
+
+    void Start()
+    {
+        _profiler = FindFirstObjectByType<Profiler>();
+    }
+
     /**
     * assume a is local hologram space, b is remote hologram space
     * S_a: local speaker
@@ -73,13 +80,20 @@ public class GazeAlignment : MonoBehaviour
         if (Eb_xz.sqrMagnitude > 1e-3f && Eh_xz.sqrMagnitude > 1e-3f) 
         {
             // guarantee face-to-face conditions (Eb should align with -Eh)
-            // the rotation difference between Eb and the inverse of Eh.
+            // calculate the rotation difference between Eb and the inverse of Eh
             Quaternion targetRotation = Quaternion.FromToRotation(Eb_xz.normalized, -Eh_xz.normalized);
             // apply the rotation difference to the hologram (y axis)
             Quaternion finalRot = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
 
-            // lerp smoothing
-            P_b.localRotation = Quaternion.Slerp(P_b.localRotation, finalRot, t);
+            // deadzone filter to eliminate jitter
+            float rotDeadzone = 1.0f; //degree
+            float angleDifference = Quaternion.Angle(P_b.localRotation, finalRot);
+
+            if (angleDifference > rotDeadzone)
+            {
+                // lerp smoothing
+                P_b.localRotation = Quaternion.Slerp(P_b.localRotation, finalRot, t);
+            }
         }
         
         // calculate vertical height differences
@@ -126,5 +140,15 @@ public class GazeAlignment : MonoBehaviour
         // apply scaling smoothly while maintaining realistic body proportions
         Vector3 scaleVec = new Vector3(finalScale, finalScale, finalScale);
         P_b.localScale = Vector3.Lerp(P_b.localScale, scaleVec, t);
+
+        if (_profiler != null && _profiler.isLogging)
+        {
+            _profiler.RecordGazeMetrics(
+                (int)currentScenario + 1, // Case 1: 1, Case 2: 2, Case 3: 3
+                calculatedFinalScale,
+                localDeltaY,
+                remoteDeltaY
+            );
+        }
     }
 }

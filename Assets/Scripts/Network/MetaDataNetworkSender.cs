@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
@@ -47,11 +48,8 @@ public class MetaDataNetworkSender : MonoBehaviour
     private Thread _sendThread;
     private bool _running;
 
-    // TODO data lock
-
     void Start()
     {
-        _udpClient = new UdpClient();
         _running = true;
 
         _sendThread = new Thread(SendLoop);
@@ -61,53 +59,64 @@ public class MetaDataNetworkSender : MonoBehaviour
 
     private void SendLoop()
     {
-        // 14 float * 4 byte = 56 byte
-        byte[] metaPacket = new byte[56];
-
-        while (_running)
+        try
         {
-            // S_a
-            Vector3 saPos = localTransform_pos;
-            Quaternion saRot = localTransform_rot;
-            // P_b
-            Vector3 pbPos = hologramTransform_pos;
-            Quaternion pbRot = hologramTransform_rot;
+            _udpClient = new UdpClient();
+            _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, targetPort));
 
-            int offset = 0;
+            // 14 float * 4 byte = 56 byte
+            byte[] metaPacket = new byte[56];
 
-            // Position (X, Y, Z) - 12 Byte
-            Buffer.BlockCopy(BitConverter.GetBytes(saPos.x), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(saPos.y), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(saPos.z), 0, metaPacket, offset, 4); offset += 4;
-
-            // Rotation (X, Y, Z, W) - 16 Byte
-            Buffer.BlockCopy(BitConverter.GetBytes(saRot.x), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(saRot.y), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(saRot.z), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(saRot.w), 0, metaPacket, offset, 4); offset += 4;
-
-            // Position (X, Y, Z) - 12 Byte
-            Buffer.BlockCopy(BitConverter.GetBytes(pbPos.x), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(pbPos.y), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(pbPos.z), 0, metaPacket, offset, 4); offset += 4;
-
-            // Rotation (X, Y, Z, W) - 16 Byte
-            Buffer.BlockCopy(BitConverter.GetBytes(pbRot.x), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(pbRot.y), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(pbRot.z), 0, metaPacket, offset, 4); offset += 4;
-            Buffer.BlockCopy(BitConverter.GetBytes(pbRot.w), 0, metaPacket, offset, 4);
-
-            try
+            while (_running)
             {
-                _udpClient.Send(metaPacket, metaPacket.Length, targetIP, targetPort);
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("Metadata UDP sender error: " + e.Message);
-            }
+                // S_a
+                Vector3 saPos = localTransform_pos;
+                Quaternion saRot = localTransform_rot;
+                // P_b
+                Vector3 pbPos = hologramTransform_pos;
+                Quaternion pbRot = hologramTransform_rot;
 
-            // 30 FPS
-            Thread.Sleep(33);
+                int offset = 0;
+
+                // Position (X, Y, Z) - 12 Byte
+                Buffer.BlockCopy(BitConverter.GetBytes(saPos.x), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(saPos.y), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(saPos.z), 0, metaPacket, offset, 4); offset += 4;
+
+                // Rotation (X, Y, Z, W) - 16 Byte
+                Buffer.BlockCopy(BitConverter.GetBytes(saRot.x), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(saRot.y), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(saRot.z), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(saRot.w), 0, metaPacket, offset, 4); offset += 4;
+
+                // Position (X, Y, Z) - 12 Byte
+                Buffer.BlockCopy(BitConverter.GetBytes(pbPos.x), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(pbPos.y), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(pbPos.z), 0, metaPacket, offset, 4); offset += 4;
+
+                // Rotation (X, Y, Z, W) - 16 Byte
+                Buffer.BlockCopy(BitConverter.GetBytes(pbRot.x), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(pbRot.y), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(pbRot.z), 0, metaPacket, offset, 4); offset += 4;
+                Buffer.BlockCopy(BitConverter.GetBytes(pbRot.w), 0, metaPacket, offset, 4);
+
+                try
+                {
+                    _udpClient.Send(metaPacket, metaPacket.Length, targetIP, targetPort);
+                }
+                catch (Exception e)
+                {
+                    if (_running) Debug.LogWarning("Metadata UDP sender error: " + e.Message);
+                }
+
+                // 30 FPS
+                Thread.Sleep(33);
+            }
+        }
+        catch (SocketException ex)
+        {
+            if (_running) Debug.LogError("Metadata Sender Socket Error: " + ex.Message);
         }
     }
 

@@ -192,7 +192,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &712858984
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -706,7 +706,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2106208985}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e258c012475d54ee1902c8f4ccb1127e, type: 3}
   m_Name: 
@@ -724,9 +724,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3e22a30ac8d14e13a129a2882f85679, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isLogging: 0
-  logInterval: 0.5
-  customFileName: MSc_Evaluation_Log
+  isLogging: 1
+  systemLogInterval: 0.5
+  customFileNamePrefix: MSc_Evaluation
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

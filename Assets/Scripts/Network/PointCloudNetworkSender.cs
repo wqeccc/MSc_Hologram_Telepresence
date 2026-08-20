@@ -8,6 +8,15 @@ public class PointCloudNetworkSender : MonoBehaviour
 {
     public KinectController _kinectController;
 
+    /**
+     *  |______MetaData___________>|    port 50052
+     *  |________PointCloud_______>|    port 50051
+     *  |<---pointCloud confirmed--|
+     * pc1                   pc2   ml2    
+     *  |--pointC confirmed-->|    |
+     *  |<________PointCloud__|    |    port 50051
+     *  |<______MetaData___________|    port 50052
+     */
     [Header("Network Settings")]
     public string targetIP = "129.11.145.107"; // ml2 ip address:192.168.137.172, ml2 pc: 129.11.145.130, pc: 192.168.137.105
     public int targetPort = 50051; // 50051-pointcloud 50052-metadata
@@ -24,8 +33,6 @@ public class PointCloudNetworkSender : MonoBehaviour
     {
         _kinectController = FindFirstObjectByType<KinectController>();
 
-        _udpClient = new UdpClient();
-        _udpClient.Client.ReceiveTimeout = 1; // 0.001s (1ms)
         _running = true;
 
         _sendThread = new Thread(SendLoop);
@@ -35,63 +42,82 @@ public class PointCloudNetworkSender : MonoBehaviour
 
     private void SendLoop()
     {
-        while (_running)
+        try
         {
+            _udpClient = new UdpClient();
+            _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, targetPort));
+            _udpClient.Client.ReceiveTimeout = 100; // 100ms
+
             IPEndPoint anyEP = new IPEndPoint(IPAddress.Any, 0);
 
-            if (!kinectConfigACK)
+            while (_running)
             {
-                try
-                {
-                    while (_udpClient.Available > 0)
+                // if (!kinectConfigACK)
+                // {
+                    try
                     {
-                        byte[] ackPacket = _udpClient.Receive(ref anyEP);
-                        if (ackPacket.Length > 0 && ackPacket[0] == 0x99) 
+                        while (_udpClient.Available > 0)
                         {
-                            kinectConfigACK = true;
-                            Debug.Log("Receiver confirmed. Starting point cloud stream");
-                            break;
+                            byte[] ackPacket = _udpClient.Receive(ref anyEP);
+                            if (ackPacket.Length > 0 && ackPacket[0] == 0x99) 
+                            {
+                                kinectConfigACK = true;
+                                Debug.Log("Receiver confirmed. Starting point cloud stream");
+                                break;
+                            }
+                        }
+                    }
+                    catch (SocketException)
+                    {
+                        // Debug.Log("timeout");
+                    }
+
+                    if (!kinectConfigACK)
+                    {
+                        // network configuration (packetID = -1)
+                        SendKinectConfig();
+                        Thread.Sleep(300); // 0.3s
+                        continue;
+                    }
+                // }
+
+                // point cloud data
+                byte[] localColor = null;
+                byte[] localDepth = null;
+                byte[] localBodyIndex = null;
+
+                if (_kinectController != null && _kinectController.m_bufferLock != null)
+                {
+                    lock (_kinectController.m_bufferLock)
+                    {
+                        if (_kinectController.m_colorImage != null && _kinectController.m_colorImage.Length > 0)
+                        {
+                            localColor = (byte[])_kinectController.m_colorImage.Clone();
+                            localDepth = (byte[])_kinectController.m_depthImage.Clone();
+                            localBodyIndex = (byte[])_kinectController.m_bodyIndexMap.Clone();
                         }
                     }
                 }
-                catch (SocketException)
+
+                if (localColor != null && localDepth != null && localBodyIndex != null)
                 {
-                    // Debug.Log("timeout");
+                    // combine data
+                    byte[] pointCloudData = CombineFrameData(localColor, localDepth, localBodyIndex);
+                    SendLargeFrame(pointCloudData);
                 }
 
-                if (!kinectConfigACK)
-                {
-                    // network configuration (packetID = -1)
-                    SendKinectConfig();
-                    Thread.Sleep(300); // 0.3s
-                    continue;
-                }
+                // control sending frequency, CameraFPS is set to 30 fps in KinectController
+                Thread.Sleep(33);
             }
-
-            // point cloud data
-            byte[] localColor = null;
-            byte[] localDepth = null;
-            byte[] localBodyIndex = null;
-
-            lock (_kinectController.m_bufferLock)
-            {
-                if (_kinectController.m_colorImage != null && _kinectController.m_colorImage.Length > 0)
-                {
-                    localColor = (byte[])_kinectController.m_colorImage.Clone();
-                    localDepth = (byte[])_kinectController.m_depthImage.Clone();
-                    localBodyIndex = (byte[])_kinectController.m_bodyIndexMap.Clone();
-                }
-            }
-
-            if (localColor != null && localDepth != null && localBodyIndex != null)
-            {
-                // combine data
-                byte[] pointCloudData = CombineFrameData(localColor, localDepth, localBodyIndex);
-                SendLargeFrame(pointCloudData);
-            }
-
-            // control sending frequency, CameraFPS is set to 30 fps in KinectController
-            Thread.Sleep(33);
+        }
+        catch (SocketException ex)
+        {
+            if (_running) Debug.LogError("UDP Sender Socket Error: " + ex.Message);
+        }
+        catch (Exception e)
+        {
+            if (_running) Debug.LogError("UDP Sender Error: " + e.Message);
         }
     }
 
@@ -102,7 +128,7 @@ public class PointCloudNetworkSender : MonoBehaviour
             return; 
         }
 
-        Debug.Log("Sending config: " + targetIP + " " + targetPort);
+        Debug.Log("Sending config to: " + targetIP + " " + targetPort);
 
         int height = _kinectController.depthHeight;
         int width = _kinectController.depthWidth;
@@ -167,7 +193,7 @@ public class PointCloudNetworkSender : MonoBehaviour
             }
             catch (Exception e)
             {
-                Debug.LogWarning("UDP error: " + e.Message);
+                Debug.LogWarning("UDP Send error: " + e.Message);
             }
         }
     }

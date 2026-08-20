@@ -39,8 +39,12 @@ public class MetaDataNetworkReceiver : MonoBehaviour
     {
         try
         {
-            _udpClient = new UdpClient(localListeningPort);
-            IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, localListeningPort);
+            // ReuseAddress
+            _udpClient = new UdpClient();
+            _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, localListeningPort));
+
+            IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
             Debug.Log($"Metadata UDP Receiver started. Listening on port {localListeningPort}...");
 
             while (_running)
@@ -76,12 +80,13 @@ public class MetaDataNetworkReceiver : MonoBehaviour
                 }
             }
         }
+        catch (SocketException ex)
+        {
+            if (_running) Debug.LogError("Metadata Receiver Socket Error: " + ex.Message);
+        }
         catch (Exception e)
         {
-            if (_running)
-            {
-                Debug.LogError("Metadata receiver error: " + e.Message);
-            }
+            if (_running) Debug.LogError("Metadata receiver error: " + e.Message);
         }
     }
 
