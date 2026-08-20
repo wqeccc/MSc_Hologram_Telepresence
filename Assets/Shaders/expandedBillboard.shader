@@ -76,6 +76,7 @@ Shader "Custom/expandedBillboard"
                 int dr = d.r * 255;
                 int dg = d.g * 255;
                 return dr | dg << 8;
+                // return dr | ((dg & 0xFF) << 8);
             }
 
             float2 transform_2d_point(float2 uv)
@@ -247,9 +248,9 @@ Shader "Custom/expandedBillboard"
                     }
                 }
 
+                // (profiling)
                 // median filtering to remove noise
                 dValue = medianFilterDepth(dValue, v.uv0.x, v.uv0.y);
-                
                 // apply bilateral filtering to smooth the surfaces of the face and body
                 float filteredD = bilateralFilterDepth(float(dValue), v.uv0.x, v.uv0.y);
                 dValue = int(filteredD);

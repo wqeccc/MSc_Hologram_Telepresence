@@ -83,7 +83,8 @@ public class PointCloudNetworkReceiver : MonoBehaviour
 
         _remoteSpeakerObj = new GameObject("RemoteSpeaker");
         _remoteSpeakerObj.transform.parent = this.transform;
-        _remoteSpeakerObj.transform.localPosition = new Vector3(0f, 0.2f, 1.5f);
+        // _remoteSpeakerObj.transform.localPosition = new Vector3(0f, 0.2f, 1.5f);
+        _remoteSpeakerObj.transform.localPosition = new Vector3(0f, 0.2f, 0f);
         _remoteSpeakerObj.transform.localRotation = Quaternion.identity;
         _remoteSpeakerObj.transform.localScale = Vector3.one;
 
@@ -100,9 +101,11 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     {
         try
         {
-            _udpClient = new UdpClient(listeningPort);
+            _udpClient = new UdpClient();
+            _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, listeningPort));
             // receive packets from any ip on listeningPort
-            IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, listeningPort);
+            IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
             Debug.Log($"UDP Receiver started. Listening on port {listeningPort}");
 
             while (_running)
@@ -295,6 +298,10 @@ public class PointCloudNetworkReceiver : MonoBehaviour
     private void initializePointCloudData_old()
     {
         _renderMaterial = Resources.Load("Materials/cloudmatDepth") as Material;
+        if (_renderMaterial == null) {
+            Debug.LogError("shader material loading error");
+        }
+
         List<Vector3> points = new List<Vector3>();
         List<int> ind = new List<int>();
         int n = 0; int i = 0;
@@ -346,11 +353,12 @@ public class PointCloudNetworkReceiver : MonoBehaviour
         
         // n: vertex index, i: gameObject index
         int n = 0, i = 0;
+        int step = 1; // 1 = 100%, 2 = 25%, 4 = 6.25% vertices (profiling)
 
         // pixels
-        for (float w = 0; w < _depthWidth; w++)
+        for (float w = 0; w < _depthWidth; w += step)
         {
-            for (float h = 0; h < _depthHeight; h++)
+            for (float h = 0; h < _depthHeight; h += step)
             {
                 // normalized coordinates
                 float u = w / _depthWidth;

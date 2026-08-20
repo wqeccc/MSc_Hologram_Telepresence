@@ -61,7 +61,11 @@ public class UI_ML2 : MonoBehaviour
 
     void UpdateUI()
     {
-        if (statusText == null) return;
+        if (statusText == null)
+        {
+            Debug.LogWarning("[UI_ML2] can't find statusText");
+            return;
+        }
 
         string runtime = $"Runtime: {Time.time:F1}s";
         string height = "\n";
