@@ -41,7 +41,7 @@ public class MetaDataNetworkSender : MonoBehaviour
     }
 
     [Header("Network Settings")]
-    public string targetIP = "10.41.60.12"; //  ml2 ip address:192.168.137.172, ml2 pc: 129.11.145.130, pc: 129.11.145.107
+    public string targetIP = "129.11.145.107"; //  ml2 ip address:10.41.60.12, ml2 pc: 129.11.145.130, pc: 129.11.145.107
     public int targetPort = 50052; // 50051-pointcloud 50052-metadata
 
     private UdpClient _udpClient;

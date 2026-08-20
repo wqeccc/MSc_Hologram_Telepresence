@@ -47,7 +47,6 @@ Library: D:\crrl0097\MSc_Hologram_Telepresence\Temp\BurstOutput\tempburstlibs\x8
 --assembly-defines=UnityEngine;
 --generate-link-xml=Temp\burst.link.xml
 --temp-folder=D:\crrl0097\MSc_Hologram_Telepresence\Temp\Burst
---debug=Full
 --key-folder=C:/Program Files/Unity/Hub/Editor/2023.2.2f1/Editor/Data/PlaybackEngines/AndroidPlayer
 --decode-folder=D:\crrl0097\MSc_Hologram_Telepresence\Library\Burst
 --output=D:\crrl0097\MSc_Hologram_Telepresence\Temp\BurstOutput\tempburstlibs\x86_64\lib_burst_generated

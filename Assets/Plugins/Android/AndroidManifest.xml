@@ -9,7 +9,4 @@
       <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
     </activity>
   </application>
-  <uses-permission android:name="com.magicleap.permission.HAND_TRACKING" />
-  <uses-permission android:name="com.magicleap.permission.SPATIAL_MAPPING" />
-  <uses-permission android:name="com.magicleap.permission.SPATIAL_ANCHOR" />
 </manifest>
